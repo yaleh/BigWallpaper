@@ -25,5 +25,5 @@ fi
 
 echo ${NEW_URL} >${URLFILE}
 ln -sf "${NEW_IMGFILE}" "${IMGFILE}"
-gsettings set org.gnome.desktop.background picture-uri "file://${IMGFILE}"
+gsettings set org.gnome.desktop.background picture-uri "file://${NEW_IMGFILE}"
 rm "${OLD_IMGFILE}"
