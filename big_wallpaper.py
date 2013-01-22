@@ -13,6 +13,7 @@ import os
 #import argparse
 import ConfigParser
 import sys
+import dbus.service
 
 class WallPaperManager:
     SCHEMA = 'org.gnome.desktop.background'
@@ -164,7 +165,7 @@ class UpdateTimer:
                                             self.on_timer)
 
 class UIController:
-    ICON_FILE = 'camera.png'
+    ICON_FILE = 'big_wallpaper.png'
     
     def __init__(self, icon_dir=None):
         global manager
@@ -221,9 +222,25 @@ class UIController:
                                     "dialog-information")
         n.show ()
 
+DBUS_APPNAME='com.trantect.BigWallpaper'
+
+class DBusService(dbus.service.Object):
+    def __init__(self):
+        name = dbus.service.BusName(DBUS_APPNAME, bus = dbus.SessionBus())
+        dbus.service.Object.__init__(self, name, "/com/trantect/BigWallpaper")
+    
+    @dbus.service.method(dbus_interface=DBUS_APPNAME)
+    def run(self):
+        self.app.window.present()
+
 if __name__ == "__main__":
     global manager, timer, ui_controller
     
+    if dbus.SessionBus().request_name(DBUS_APPNAME) != \
+            dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
+        print "Application already running!"
+        exit(1)
+
     args = sys.argv
 
     parser = OptionParser()
@@ -247,7 +264,10 @@ if __name__ == "__main__":
         config.read(options.config)
     else:
         config.read(['big_wallpaper.conf', os.path.expanduser('~/.big_wallpaper.conf')])
-    defaults = dict(config.items("BigWallpaper"))
+    try:
+        defaults = dict(config.items("BigWallpaper"))
+    except ConfigParser.NoSectionError:
+        defaults = {}
     print defaults
 
     # Parse again with default values from config file
