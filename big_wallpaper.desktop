@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=BigWallpaper
+GenericName=Big Wallpaper
+Comment=Update wallpaper with images from Boston BigPicture
+Exec=/home/yale/work/big_wallpaper/big_wallpaper.py -p /home/yale/work/big_wallpaper -d /home/yale/.big_wallpaper -i 1800000
+Terminal=false
+Type=Application
+X-GNOME-Autostart-enabled=true

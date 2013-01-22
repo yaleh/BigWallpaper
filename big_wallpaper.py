@@ -1,0 +1,229 @@
+#!/usr/bin/python
+
+from urllib2 import urlopen
+from lxml.html import parse
+from sh import ErrorReturnCode, ls, sed, mktemp
+from gi.repository import Gio, Gtk, GObject, AppIndicator3
+from optparse import OptionParser
+
+import threading
+import tempfile
+import os
+
+class WallPaperManager:
+    SCHEMA = 'org.gnome.desktop.background'
+    KEY = 'picture-uri'
+    IMG_FILE = "big_wallpaper.jpg"
+    URL_FILE = "big_wallpaper.url"
+
+    def __init__(self, img_dir='.'):
+        self.update_lock = threading.Lock()
+        self.img_dir = img_dir
+
+        self.img_file = "%s/%s" % (self.img_dir, self.IMG_FILE)
+        self.url_file = "%s/%s" % (self.img_dir, self.URL_FILE)
+        self.real_img_file = None
+        self.wp_url = None
+        self.saved_url = None
+
+    def update_gsettings(self, image_file = None, url = None):
+        print "image_file = %s, url = %s" % (image_file, url)
+        print "Current real_img_file = %s, saved_url = %s" % \
+            (self.real_img_file, self.saved_url)
+        if image_file is not None and image_file != self.real_img_file:
+            # delete old image file, and update symbol link
+            try:
+                print "Delete old files..."
+                if self.real_img_file is not None:
+                    os.unlink(self.real_img_file) 
+                os.unlink(self.img_file)
+            except (IOError, OSError):
+                pass
+
+            print "Make new link: %s %s" % (image_file, self.img_file)
+            os.symlink(image_file, self.img_file)
+            self.real_img_file = image_file
+
+        if url is not None:
+            print "Saving URL %s to %s" % (url, self.url_file)
+            self.saved_url = url
+
+            f = open(self.url_file, "w")
+            f.write(url)
+            f.close()
+
+        if self.real_img_file is not None and \
+                self.wp_url != "file://" + self.real_img_file:
+            gsettings = Gio.Settings.new(self.SCHEMA)
+            gsettings.set_string(self.KEY, "file://" + self.real_img_file)        
+
+    def update_saved_content(self, image_file = None):
+        # get saved URL
+        try:
+            f = open(self.url_file, "r")
+            self.saved_url = f.readline()
+            f.close()
+        except IOError:
+            pass
+
+        # get saved image file name
+        try:
+            # ls -al ${IMGFILE} |sed -n -e 's/^.*\-> //p'
+            self.real_img_file = str(sed(ls('-al', self.img_file),
+                                         '-n', '-e', 's/^.*\-> //p')).strip("\n\r")
+        except ErrorReturnCode:
+            pass
+            
+        # gsettings get org.gnome.desktop.background picture-uri
+        gsettings = Gio.Settings.new(self.SCHEMA)
+        self.wp_url = gsettings.get_string(self.KEY)
+
+    def correct_link(self):
+        self.update_saved_content()
+        self.update_gsettings()
+
+    def update(self):
+        print "Updating..."
+        download_thread = WallPaperManager.DownloadThread(self)
+        download_thread.start()
+
+    def generate_img_file(self, suffix):
+        return tempfile.mkstemp(suffix=suffix, dir=self.img_dir)
+
+    class DownloadThread(threading.Thread):
+        def __init__(self, manager):
+            super(WallPaperManager.DownloadThread, self).__init__()
+            self.manager = manager
+
+        def run(self):
+            global ui_controller
+
+            if not self.manager.update_lock.acquire(False):
+                # is updaing now, just return
+                return
+
+            ui_controller.disable_update()
+
+            try:
+                print "Get URL..."
+
+                url = self.get_bigpicture_url()
+                print url
+
+                if manager.saved_url is not None:
+                    print manager.saved_url
+
+                if url is not None and url == manager.saved_url:
+                    # Duplicated URL, don't download
+                    print "Duplicated URL"
+                    return
+
+                temp_file = manager.generate_img_file(".jpg")
+                self.download_img_file(temp_file[0], url)
+                print "Downloaded %s: %s" % (url, temp_file[1])
+
+                manager.update_gsettings(image_file = temp_file[1], url = url)
+            finally:
+                ui_controller.enable_update()
+                self.manager.update_lock.release()
+
+        def get_bigpicture_url(self):
+            page = urlopen('http://www.boston.com/bigpicture')
+            p = parse(page)
+            i = p.xpath('/descendant::img[@class="bpImage"]')[0]
+            return i.get('src')
+
+        def download_img_file(self, fd, url):
+            img = urlopen(url)
+            f = os.fdopen(fd, 'w')
+            f.write(img.read())
+            f.close()
+
+class UpdateTimer:
+    def __init__(self, interval=1800000):
+        self.timer_id = GObject.timeout_add(interval,
+                                            self.on_timer)
+
+    def on_timer(self):
+        global manager
+
+        if manager is not None:
+            manager.update()
+        GObject.source_remove(self.timer_id)
+        self.timer_id = None
+        self.timer_id = GObject.timeout_add(self.UPDATE_INTERVAL,
+                                            self.on_timer)
+
+class UIController:
+    ICON_FILE = 'camera.png'
+    
+    def __init__(self, icon_dir=None):
+        global manager
+
+        icon_file = self.ICON_FILE
+        if icon_dir is not None and icon_dir != '':
+            icon_file = "%s/%s" % (icon_dir, icon_file)
+        print icon_file
+
+        self.ind = AppIndicator3.Indicator.new ("BigWallpaper",
+                                                icon_file,
+                                                AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
+        self.ind.set_status (AppIndicator3.IndicatorStatus.ACTIVE)
+
+        # create a menu
+        self.menu = Gtk.Menu()
+
+        self.update_item = Gtk.MenuItem('Update now')
+        self.update_item.connect("activate",
+                                 lambda obj: manager.update())
+
+        self.sep_item = Gtk.SeparatorMenuItem()
+
+        self.quit_item = Gtk.MenuItem('Quit')
+        self.quit_item.connect("activate", Gtk.main_quit)
+
+        self.menu.append(self.update_item)
+        self.menu.append(self.sep_item)
+        self.menu.append(self.quit_item)
+        self.menu.show_all()
+
+        self.ind.set_menu(self.menu)
+
+    def disable_update(self):
+        self.update_item.set_sensitive(False)
+#        self.update_item.set_label("Updating...")
+
+    def enable_update(self):
+#        self.update_item.set_label("Update now")
+        self.update_item.set_sensitive(True)
+
+    def show_message_dialog(self, title, message):
+        dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.INFO,
+                                   Gtk.ButtonsType.OK, title)
+        dialog.format_secondary_text(message)
+        dialog.run()
+        dialog.destroy()
+
+if __name__ == "__main__":
+    global manager, timer, ui_controller
+
+    parser = OptionParser()
+    parser.add_option("-p", "--prefix", dest="prefix", type="string",
+                      help="path prefix for app resources",
+                      default="")
+    parser.add_option("-d", "--dest", dest="dest", type="string",
+                      help="dest dir for download image files",
+                      default=os.path.expanduser('~'))
+    parser.add_option("-i", "--interval", dest="interval", type="int",
+                      help="interval of updating in seconds",
+                      default=1800000)
+    (options, args) = parser.parse_args()
+
+    GObject.threads_init()
+    manager = WallPaperManager(img_dir=options.dest)
+
+    timer = UpdateTimer(interval=options.interval)
+    ui_controller = UIController(icon_dir=options.prefix)
+
+    manager.correct_link()
+    Gtk.main()
