@@ -3,12 +3,16 @@
 from urllib2 import urlopen
 from lxml.html import parse
 from sh import ErrorReturnCode, ls, sed, mktemp
-from gi.repository import Gio, Gtk, GObject, AppIndicator3
+from gi.repository import Gio, Gtk, GObject, AppIndicator3, Notify
 from optparse import OptionParser
+from config import Config
 
 import threading
 import tempfile
 import os
+#import argparse
+import ConfigParser
+import sys
 
 class WallPaperManager:
     SCHEMA = 'org.gnome.desktop.background'
@@ -55,7 +59,8 @@ class WallPaperManager:
         if self.real_img_file is not None and \
                 self.wp_url != "file://" + self.real_img_file:
             gsettings = Gio.Settings.new(self.SCHEMA)
-            gsettings.set_string(self.KEY, "file://" + self.real_img_file)        
+            gsettings.set_string(self.KEY, "file://" + self.real_img_file)
+            GObject.idle_add(ui_controller.notify_wallpaper_update)
 
     def update_saved_content(self, image_file = None):
         # get saved URL
@@ -79,6 +84,10 @@ class WallPaperManager:
         self.wp_url = gsettings.get_string(self.KEY)
 
     def correct_link(self):
+        try:
+            os.mkdir(self.img_dir)
+        except OSError:
+            pass
         self.update_saved_content()
         self.update_gsettings()
 
@@ -102,7 +111,7 @@ class WallPaperManager:
                 # is updaing now, just return
                 return
 
-            ui_controller.disable_update()
+            GObject.idle_add(ui_controller.disable_update)
 
             try:
                 print "Get URL..."
@@ -124,7 +133,7 @@ class WallPaperManager:
 
                 manager.update_gsettings(image_file = temp_file[1], url = url)
             finally:
-                ui_controller.enable_update()
+                GObject.idle_add(ui_controller.enable_update)
                 self.manager.update_lock.release()
 
         def get_bigpicture_url(self):
@@ -191,11 +200,11 @@ class UIController:
 
     def disable_update(self):
         self.update_item.set_sensitive(False)
-#        self.update_item.set_label("Updating...")
+        self.update_item.set_label("Updating...")
 
     def enable_update(self):
-#        self.update_item.set_label("Update now")
         self.update_item.set_sensitive(True)
+        self.update_item.set_label("Update now")
 
     def show_message_dialog(self, title, message):
         dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.INFO,
@@ -204,10 +213,22 @@ class UIController:
         dialog.run()
         dialog.destroy()
 
+    def notify_wallpaper_update(self, title="New Wallpaper",
+                                body="A new wallpaper was updated by BigWallpaper."):
+        if not Notify.init ("BigWallpaper"):
+            return
+        n = Notify.Notification.new(title, body,
+                                    "dialog-information")
+        n.show ()
+
 if __name__ == "__main__":
     global manager, timer, ui_controller
+    
+    args = sys.argv
 
     parser = OptionParser()
+    parser.add_option("-c", "--config-file", dest="config", default="",
+                      metavar="FILE", help="Config file")
     parser.add_option("-p", "--prefix", dest="prefix", type="string",
                       help="path prefix for app resources",
                       default="")
@@ -217,13 +238,29 @@ if __name__ == "__main__":
     parser.add_option("-i", "--interval", dest="interval", type="int",
                       help="interval of updating in seconds",
                       default=1800000)
-    (options, args) = parser.parse_args()
+
+    # Actually, only CONFIG is necessary for this parse_arg()
+    (options, pending_args) = parser.parse_args(args)
+
+    config = ConfigParser.SafeConfigParser()
+    if options.config:
+        config.read(options.config)
+    else:
+        config.read(['big_wallpaper.conf', os.path.expanduser('~/.big_wallpaper.conf')])
+    defaults = dict(config.items("BigWallpaper"))
+    print defaults
+
+    # Parse again with default values from config file
+    parser.set_defaults(**defaults)
+    (options, args) = parser.parse_args(args)
+
+    print options
 
     GObject.threads_init()
-    manager = WallPaperManager(img_dir=options.dest)
+    manager = WallPaperManager(img_dir=os.path.expanduser(options.dest))
 
     timer = UpdateTimer(interval=options.interval)
-    ui_controller = UIController(icon_dir=options.prefix)
+    ui_controller = UIController(icon_dir=os.path.expanduser(options.prefix))
 
     manager.correct_link()
     Gtk.main()
