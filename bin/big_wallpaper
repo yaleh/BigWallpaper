@@ -165,7 +165,7 @@ class UpdateTimer:
                                             self.on_timer)
 
 class UIController:
-    ICON_FILE = 'big_wallpaper.png'
+    ICON_FILE = 'big_wallpaper_small.png'
     
     def __init__(self, icon_dir=None):
         global manager
