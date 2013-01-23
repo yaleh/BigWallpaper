@@ -14,20 +14,50 @@ import sys
 import dbus.service
 
 class WallPaperManager:
+    # Manager must created before Controller
+
     SCHEMA = 'org.gnome.desktop.background'
     KEY = 'picture-uri'
     IMG_FILE = "big_wallpaper.jpg"
     URL_FILE = "big_wallpaper.url"
+    DESKTOP_FILE = "big_wallpaper.desktop"
+    AUTOSTART_DIR = os.path.expanduser("~/.config/autostart")
 
-    def __init__(self, img_dir='.'):
+    def __init__(self, prefix_dir="share", img_dir='share/pixmaps'):
         self.update_lock = threading.Lock()
+        self.prefix_dir = prefix_dir
         self.img_dir = img_dir
 
         self.img_file = "%s/%s" % (self.img_dir, self.IMG_FILE)
         self.url_file = "%s/%s" % (self.img_dir, self.URL_FILE)
+        self.desktop_source_file = \
+            "%s/%s" % (self.prefix_dir, self.DESKTOP_FILE)
+        self.autostart_desktop_file = \
+            "%s/%s" % (self.AUTOSTART_DIR, self.DESKTOP_FILE)
         self.real_img_file = None
         self.wp_url = None
         self.saved_url = None
+    
+    def get_autostart(self):
+        if os.access(self.autostart_desktop_file, os.F_OK):
+            return True
+        else:
+            return False
+            
+    def update_autostart(self, autostart):
+        try:
+            os.unlink(self.autostart_desktop_file)
+        except OSError:
+            pass
+
+        if autostart:
+            f_source = open(self.desktop_source_file, "r")
+            f_dest = open(self.autostart_desktop_file, "w")
+            try:
+                f_dest.write(f_source.read())
+            finally:
+                f_source.close()
+                f_dest.close()
 
     def update_gsettings(self, image_file = None, url = None):
         print "image_file = %s, url = %s" % (image_file, url)
@@ -183,12 +213,18 @@ class UIController:
         self.update_item.connect("activate",
                                  lambda obj: manager.update())
 
+        self.auto_start_item = Gtk.CheckMenuItem('Start with System')
+        self.auto_start_item.set_active(manager.get_autostart())
+        self.auto_start_item.connect("toggled",
+                                     lambda obj: manager.update_autostart(self.auto_start_item.get_active()))
+
         self.sep_item = Gtk.SeparatorMenuItem()
 
         self.quit_item = Gtk.MenuItem('Quit')
         self.quit_item.connect("activate", Gtk.main_quit)
 
         self.menu.append(self.update_item)
+        self.menu.append(self.auto_start_item)
         self.menu.append(self.sep_item)
         self.menu.append(self.quit_item)
         self.menu.show_all()
@@ -273,10 +309,13 @@ if __name__ == "__main__":
     print options
 
     GObject.threads_init()
-    manager = WallPaperManager(img_dir=os.path.expanduser(options.dest))
+    manager = WallPaperManager( \
+         prefix_dir = os.path.expanduser(options.prefix),
+         img_dir=os.path.expanduser(options.dest))
 
     timer = UpdateTimer(interval=options.interval)
-    ui_controller = UIController(icon_dir=os.path.expanduser(options.prefix+"/pixmaps"))
+    ui_controller = UIController( \
+        icon_dir = os.path.expanduser(options.prefix+"/pixmaps"))
 
     manager.correct_link()
     Gtk.main()

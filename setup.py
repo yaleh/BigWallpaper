@@ -14,6 +14,7 @@ setup(
     license = "LICENSE.txt",
     data_files = [
         ('share/applications', ["share/big_wallpaper.desktop"]),
+        ('share/big_wallpaper', ["share/big_wallpaper.desktop"]),
         ('share/big_wallpaper/pixmaps', ["share/pixmaps/big_wallpaper_small.png"]),
         ('/usr/share/icons/hicolor/64x64/apps', ["share/pixmaps/big_wallpaper.png"]),
         ],
