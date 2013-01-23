@@ -2,7 +2,6 @@
 
 from urllib2 import urlopen
 from lxml.html import parse
-from sh import ErrorReturnCode, ls, sed, mktemp
 from gi.repository import Gio, Gtk, GObject, AppIndicator3, Notify
 from optparse import OptionParser
 from config import Config
@@ -10,7 +9,6 @@ from config import Config
 import threading
 import tempfile
 import os
-#import argparse
 import ConfigParser
 import sys
 import dbus.service
@@ -74,10 +72,8 @@ class WallPaperManager:
 
         # get saved image file name
         try:
-            # ls -al ${IMGFILE} |sed -n -e 's/^.*\-> //p'
-            self.real_img_file = str(sed(ls('-al', self.img_file),
-                                         '-n', '-e', 's/^.*\-> //p')).strip("\n\r")
-        except ErrorReturnCode:
+            self.real_img_file = os.readlink(self.img_file)
+        except OSError:
             pass
             
         # gsettings get org.gnome.desktop.background picture-uri
