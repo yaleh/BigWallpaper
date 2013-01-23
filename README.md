@@ -1,4 +1,4 @@
 BigWallpaper
 ============
 
-Dynamic wallpaper from Boston BigPicture for Ubuntu
+Python based wallpaper updating applet from Boston BigPicture for Unity.
