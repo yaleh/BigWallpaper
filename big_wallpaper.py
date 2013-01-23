@@ -183,7 +183,7 @@ class UIController:
         # create a menu
         self.menu = Gtk.Menu()
 
-        self.update_item = Gtk.MenuItem('Update now')
+        self.update_item = Gtk.MenuItem('Update Now')
         self.update_item.connect("activate",
                                  lambda obj: manager.update())
 
@@ -205,7 +205,7 @@ class UIController:
 
     def enable_update(self):
         self.update_item.set_sensitive(True)
-        self.update_item.set_label("Update now")
+        self.update_item.set_label("Update Now")
 
     def show_message_dialog(self, title, message):
         dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.INFO,
