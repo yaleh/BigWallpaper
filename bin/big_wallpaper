@@ -248,10 +248,10 @@ if __name__ == "__main__":
                       metavar="FILE", help="Config file")
     parser.add_option("-p", "--prefix", dest="prefix", type="string",
                       help="path prefix for app resources",
-                      default="")
+                      default="/usr/share/big_wallpaper")
     parser.add_option("-d", "--dest", dest="dest", type="string",
                       help="dest dir for download image files",
-                      default=os.path.expanduser('~'))
+                      default=os.path.expanduser('~/.big_wallpaper'))
     parser.add_option("-i", "--interval", dest="interval", type="int",
                       help="interval of updating in seconds",
                       default=1800000)
@@ -280,7 +280,7 @@ if __name__ == "__main__":
     manager = WallPaperManager(img_dir=os.path.expanduser(options.dest))
 
     timer = UpdateTimer(interval=options.interval)
-    ui_controller = UIController(icon_dir=os.path.expanduser(options.prefix))
+    ui_controller = UIController(icon_dir=os.path.expanduser(options.prefix+"/pixmaps"))
 
     manager.correct_link()
     Gtk.main()
