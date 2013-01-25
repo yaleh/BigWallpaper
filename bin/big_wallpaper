@@ -219,7 +219,7 @@ class UIController:
                            'big_wallpaper_updating_4.png']
     
     def __init__(self, icon_dir=None):
-        global manager
+        global manager, config
 
         self.animation_timer = None
 
@@ -243,6 +243,10 @@ class UIController:
         self.auto_start_item.connect("toggled",
                                      lambda obj: manager.update_autostart(self.auto_start_item.get_active()))
 
+        self.save_item = Gtk.MenuItem("Save Preference")
+        self.save_item.connect("activate",
+                               lambda obj: config.save())
+
         self.sep_item = Gtk.SeparatorMenuItem()
 
         self.quit_item = Gtk.MenuItem('Quit')
@@ -250,6 +254,7 @@ class UIController:
 
         self.menu.append(self.update_item)
         self.menu.append(self.auto_start_item)
+        self.menu.append(self.save_item)
         self.menu.append(self.sep_item)
         self.menu.append(self.quit_item)
         self.menu.show_all()
@@ -304,57 +309,90 @@ class DBusService(dbus.service.Object):
     def run(self):
         self.app.window.present()
 
+class Config:
+    BIGWALLPAPER_SECTION = "BigWallpaper"
+
+    def __init__(self, args):
+        parser = OptionParser()
+        parser.add_option("-c", "--config-file", dest="config", default="",
+                          metavar="FILE", help="Config file")
+        parser.add_option("-p", "--prefix", dest="prefix", type="string",
+                          help="path prefix for app resources",
+                          default="/usr/share/big_wallpaper")
+        parser.add_option("-d", "--dest", dest="dest", type="string",
+                          help="dest dir for download image files",
+                          default=os.path.expanduser('~/.big_wallpaper'))
+        parser.add_option("-i", "--interval", dest="interval", type="int",
+                          help="interval of updating in seconds",
+                          default=1800000)
+
+        # Actually, only CONFIG is necessary for this parse_arg()
+        (self.options, pending_args) = parser.parse_args(args)
+
+        config = ConfigParser.SafeConfigParser()
+        if self.options.config:
+            config.read(self.options.config)
+        else:
+            config.read(['big_wallpaper.conf',
+                         os.path.expanduser('~/.big_wallpaper.conf')])
+        try:
+            defaults = dict(config.items(self.BIGWALLPAPER_SECTION))
+        except ConfigParser.NoSectionError:
+            defaults = {}
+        print defaults
+
+        # Parse again with default values from config file
+        parser.set_defaults(**defaults)
+        (self.options, args) = parser.parse_args(args)
+
+        print self.options
+
+    def get_options(self):
+        return self.options
+
+    def save(self):
+        config = ConfigParser.SafeConfigParser()
+
+        config.add_section(self.BIGWALLPAPER_SECTION)
+
+        config.set(self.BIGWALLPAPER_SECTION, 'interval',
+                   "%d" % self.options.interval)
+        config.set(self.BIGWALLPAPER_SECTION, 'dest', 
+                   self.options.dest)
+        config.set(self.BIGWALLPAPER_SECTION, 'prefix', 
+                   self.options.prefix)
+
+        f = None
+        if self.options.config:
+            f = open(self.options.config, 'wb')
+        else:
+            f = open(os.path.expanduser('~/.big_wallpaper.conf'), 'wb')
+
+        if f:
+            try:
+                config.write(f)
+            finally:
+                f.close()
+
 if __name__ == "__main__":
-    global manager, timer, ui_controller
+    global manager, timer, ui_controller, config
     
     if dbus.SessionBus().request_name(DBUS_APPNAME) != \
             dbus.bus.REQUEST_NAME_REPLY_PRIMARY_OWNER:
         print "Application already running!"
         exit(1)
 
-    args = sys.argv
-
-    parser = OptionParser()
-    parser.add_option("-c", "--config-file", dest="config", default="",
-                      metavar="FILE", help="Config file")
-    parser.add_option("-p", "--prefix", dest="prefix", type="string",
-                      help="path prefix for app resources",
-                      default="/usr/share/big_wallpaper")
-    parser.add_option("-d", "--dest", dest="dest", type="string",
-                      help="dest dir for download image files",
-                      default=os.path.expanduser('~/.big_wallpaper'))
-    parser.add_option("-i", "--interval", dest="interval", type="int",
-                      help="interval of updating in seconds",
-                      default=1800000)
-
-    # Actually, only CONFIG is necessary for this parse_arg()
-    (options, pending_args) = parser.parse_args(args)
-
-    config = ConfigParser.SafeConfigParser()
-    if options.config:
-        config.read(options.config)
-    else:
-        config.read(['big_wallpaper.conf', os.path.expanduser('~/.big_wallpaper.conf')])
-    try:
-        defaults = dict(config.items("BigWallpaper"))
-    except ConfigParser.NoSectionError:
-        defaults = {}
-    print defaults
-
-    # Parse again with default values from config file
-    parser.set_defaults(**defaults)
-    (options, args) = parser.parse_args(args)
-
-    print options
+    config = Config(sys.argv)
 
     GObject.threads_init()
     manager = WallPaperManager( \
-         prefix_dir = os.path.expanduser(options.prefix),
-         img_dir=os.path.expanduser(options.dest))
+         prefix_dir = os.path.expanduser(config.get_options().prefix),
+         img_dir=os.path.expanduser(config.get_options().dest))
 
-    timer = UpdateTimer(interval=options.interval)
+    timer = UpdateTimer(interval=config.get_options().interval)
     ui_controller = UIController( \
-        icon_dir = os.path.expanduser(options.prefix+"/pixmaps"))
+        icon_dir = os.path.expanduser( \
+            config.get_options().prefix+"/pixmaps"))
 
     manager.correct_link()
     Gtk.main()
