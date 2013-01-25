@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
+import glob
 
 setup(
     name = 'big_wallpaper',
@@ -15,7 +16,7 @@ setup(
     data_files = [
         ('share/applications', ["share/big_wallpaper.desktop"]),
         ('share/big_wallpaper', ["share/big_wallpaper.desktop"]),
-        ('share/big_wallpaper/pixmaps', ["share/pixmaps/big_wallpaper_small.png"]),
+        ('share/big_wallpaper/pixmaps', glob.glob("share/pixmaps/*.png")),
         ('/usr/share/icons/hicolor/64x64/apps', ["share/pixmaps/big_wallpaper.png"]),
         ],
     install_requires = [

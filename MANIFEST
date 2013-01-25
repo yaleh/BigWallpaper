@@ -7,3 +7,8 @@ big_wallpaper/__init__.py
 bin/big_wallpaper
 share/big_wallpaper.desktop
 share/pixmaps/big_wallpaper.png
+share/pixmaps/big_wallpaper_small.png
+share/pixmaps/big_wallpaper_updating_1.png
+share/pixmaps/big_wallpaper_updating_2.png
+share/pixmaps/big_wallpaper_updating_3.png
+share/pixmaps/big_wallpaper_updating_4.png

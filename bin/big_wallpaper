@@ -177,35 +177,58 @@ class WallPaperManager:
 
 class UpdateTimer:
     def __init__(self, interval=1800000):
-        self.timer_id = GObject.timeout_add(interval,
-                                            self.on_timer)
+        self.interval = interval
+        self.timer_id = GObject.timeout_add(interval, self.on_timer)
 
     def on_timer(self):
         global manager
 
         if manager is not None:
             manager.update()
+
+        return True # continue
+
+class AnimationTimer:
+    def __init__(self, interval, icons):
+        self.interval = interval
+        self.icons = icons
+        self.current_icon_index = 0
+        
+        ui_controller.update_appindicator(self.icons[self.current_icon_index])
+
+        self.timer_id = GObject.timeout_add(self.interval, self.on_timer)
+
+    def cancel(self):
         GObject.source_remove(self.timer_id)
         self.timer_id = None
-        self.timer_id = GObject.timeout_add(self.UPDATE_INTERVAL,
-                                            self.on_timer)
+
+    def on_timer(self):
+        try:
+            self.current_icon_index += 1
+            self.current_icon_index %= len(self.icons)
+
+            ui_controller.update_appindicator(self.icons[self.current_icon_index])
+        finally:
+            return True # continue
 
 class UIController:
     ICON_FILE = 'big_wallpaper_small.png'
-    UPDATING_ICON_FILE = 'big_wallpaper_updating_small.png'
+    UPDATING_ICON_FILES = ['big_wallpaper_updating_1.png',
+                           'big_wallpaper_updating_2.png',
+                           'big_wallpaper_updating_3.png',
+                           'big_wallpaper_updating_4.png']
     
     def __init__(self, icon_dir=None):
         global manager
 
-        self.icon_file = self.ICON_FILE
-        self.updating_icon_file = self.UPDATING_ICON_FILE
-        if icon_dir is not None and icon_dir != '':
-            self.icon_file = "%s/%s" % (icon_dir, self.icon_file)
-            self.updating_icon_file = "%s/%s" % (icon_dir, self.updating_icon_file)
+        self.animation_timer = None
 
-        self.ind = AppIndicator3.Indicator.new ("BigWallpaper",
-                                                self.icon_file,
-                                                AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
+        self.icon_dir = icon_dir
+
+        self.ind = AppIndicator3.Indicator.new ( \
+            "BigWallpaper",
+            "%s/%s" % (self.icon_dir, self.ICON_FILE),
+            AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
         self.ind.set_status (AppIndicator3.IndicatorStatus.ACTIVE)
 
         # create a menu
@@ -236,12 +259,24 @@ class UIController:
     def start_updating(self):
         self.update_item.set_sensitive(False)
         self.update_item.set_label("Updating...")
-        self.ind.set_icon(self.updating_icon_file)
+
+        self.animation_timer = AnimationTimer( \
+            500,
+            map(lambda s: "%s/%s" % (self.icon_dir, s),
+                self.UPDATING_ICON_FILES) )
 
     def finish_updating(self):
         self.update_item.set_sensitive(True)
         self.update_item.set_label("Update Now")
-        self.ind.set_icon(self.icon_file)
+
+        if self.animation_timer is not None:
+            self.animation_timer.cancel()
+            self.animation_timer = None
+
+        self.ind.set_icon("%s/%s" % (self.icon_dir, self.ICON_FILE))
+
+    def update_appindicator(self, icon):
+        self.ind.set_icon(icon)
 
     def show_message_dialog(self, title, message):
         dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.INFO,
