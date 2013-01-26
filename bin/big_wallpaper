@@ -1,4 +1,22 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+#    Copyright 2012-2013, Yale Huang, yale.huang@trantect.com
+#
+#    This file is part of BigWallpaper.
+#
+#    Pyrit is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    Pyrit is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with BigWallpaper.  If not, see <http://www.gnu.org/licenses/>.
 
 from urllib2 import urlopen
 from lxml.html import parse
@@ -158,7 +176,8 @@ class WallPaperManager:
                 self.download_img_file(temp_file[0], url)
                 print "Downloaded %s: %s" % (url, temp_file[1])
 
-                manager.update_gsettings(image_file = temp_file[1], url = url)
+                manager.update_gsettings(image_file = temp_file[1], 
+                                         url = url)
             finally:
                 GObject.idle_add(ui_controller.finish_updating)
                 self.manager.update_lock.release()
@@ -194,7 +213,8 @@ class AnimationTimer:
         self.icons = icons
         self.current_icon_index = 0
         
-        ui_controller.update_appindicator(self.icons[self.current_icon_index])
+        ui_controller.update_appindicator( \
+            self.icons[self.current_icon_index])
 
         self.timer_id = GObject.timeout_add(self.interval, self.on_timer)
 
@@ -207,7 +227,8 @@ class AnimationTimer:
             self.current_icon_index += 1
             self.current_icon_index %= len(self.icons)
 
-            ui_controller.update_appindicator(self.icons[self.current_icon_index])
+            ui_controller.update_appindicator( \
+                self.icons[self.current_icon_index])
         finally:
             return True # continue
 
@@ -240,8 +261,10 @@ class UIController:
 
         self.auto_start_item = Gtk.CheckMenuItem('Start with System')
         self.auto_start_item.set_active(manager.get_autostart())
-        self.auto_start_item.connect("toggled",
-                                     lambda obj: manager.update_autostart(self.auto_start_item.get_active()))
+        self.auto_start_item.connect( \
+            "toggled",
+            lambda obj: \
+                manager.update_autostart(self.auto_start_item.get_active()))
 
         self.save_item = Gtk.MenuItem("Save Preference")
         self.save_item.connect("activate",
@@ -290,8 +313,9 @@ class UIController:
         dialog.run()
         dialog.destroy()
 
-    def notify_wallpaper_update(self, title="New Wallpaper",
-                                body="A new wallpaper was updated by BigWallpaper."):
+    def notify_wallpaper_update( \
+        self, title="New Wallpaper",
+        body="A new wallpaper was updated by BigWallpaper."):
         if not Notify.init ("BigWallpaper"):
             return
         n = Notify.Notification.new(title, body,
@@ -303,7 +327,8 @@ DBUS_APPNAME='com.trantect.BigWallpaper'
 class DBusService(dbus.service.Object):
     def __init__(self):
         name = dbus.service.BusName(DBUS_APPNAME, bus = dbus.SessionBus())
-        dbus.service.Object.__init__(self, name, "/com/trantect/BigWallpaper")
+        dbus.service.Object.__init__( self, name, 
+                                      "/com/trantect/BigWallpaper")
     
     @dbus.service.method(dbus_interface=DBUS_APPNAME)
     def run(self):
