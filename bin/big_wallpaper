@@ -22,7 +22,6 @@ from urllib2 import urlopen
 from lxml.html import parse
 from gi.repository import Gio, Gtk, GObject, AppIndicator3, Notify
 from optparse import OptionParser
-from config import Config
 
 import threading
 import tempfile
@@ -57,11 +56,8 @@ class WallPaperManager:
         self.saved_url = None
     
     def get_autostart(self):
-        if os.access(self.autostart_desktop_file, os.F_OK):
-            return True
-        else:
-            return False
-            
+        return os.access(self.autostart_desktop_file, os.F_OK)
+                       
     def update_autostart(self, autostart):
         try:
             os.unlink(self.autostart_desktop_file)
@@ -76,6 +72,9 @@ class WallPaperManager:
             finally:
                 f_source.close()
                 f_dest.close()
+
+    def on_image_downloaded(self, image_file = None, url = None):
+        self.update_gsettings(image_file = image_file, url = url)
 
     def update_gsettings(self, image_file = None, url = None):
         print "image_file = %s, url = %s" % (image_file, url)
@@ -176,8 +175,8 @@ class WallPaperManager:
                 self.download_img_file(temp_file[0], url)
                 print "Downloaded %s: %s" % (url, temp_file[1])
 
-                manager.update_gsettings(image_file = temp_file[1], 
-                                         url = url)
+                manager.on_image_downloaded(image_file = temp_file[1], 
+                                            url = url)
             finally:
                 GObject.idle_add(ui_controller.finish_updating)
                 self.manager.update_lock.release()
@@ -237,7 +236,8 @@ class UIController:
     UPDATING_ICON_FILES = ['big_wallpaper_updating_1.png',
                            'big_wallpaper_updating_2.png',
                            'big_wallpaper_updating_3.png',
-                           'big_wallpaper_updating_4.png']
+                           'big_wallpaper_updating_4.png',
+                           'big_wallpaper_updating_5.png']
     
     def __init__(self, icon_dir=None):
         global manager, config
@@ -355,6 +355,7 @@ class Config:
         (self.options, pending_args) = parser.parse_args(args)
 
         config = ConfigParser.SafeConfigParser()
+
         if self.options.config:
             config.read(self.options.config)
         else:
@@ -388,10 +389,10 @@ class Config:
                    self.options.prefix)
 
         f = None
-        if self.options.config:
-            f = open(self.options.config, 'wb')
-        else:
-            f = open(os.path.expanduser('~/.big_wallpaper.conf'), 'wb')
+
+        f = open(self.options.config if self.options.config \
+                     else os.path.expanduser('~/.big_wallpaper.conf'), 
+                 'wb')
 
         if f:
             try:
