@@ -27,6 +27,7 @@ import dbus.service
 from big_wallpaper.wallpaper_manager import WallPaperManager
 from big_wallpaper.ui_controller import UIController
 from big_wallpaper.config import Config
+from big_wallpaper import models
 
 class UpdateTimer:
     def __init__(self, interval=1800000):
@@ -42,6 +43,7 @@ class UpdateTimer:
         return True # continue
 
 DBUS_APPNAME='com.trantect.BigWallpaper'
+DB_FILENAME='big_wallpaper.db'
 
 class DBusService(dbus.service.Object):
     def __init__(self):
@@ -62,6 +64,8 @@ if __name__ == "__main__":
         exit(1)
 
     config = Config(sys.argv)
+
+    models.connect_db("%s/%s" % (config.get_options().dest, DB_FILENAME))
 
     GObject.threads_init()
     manager = WallPaperManager( \

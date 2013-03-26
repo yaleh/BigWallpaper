@@ -3,6 +3,7 @@ from urllib2 import urlopen
 from lxml.html import parse
 
 import threading
+import models
 
 class DownloadThread(threading.Thread):
     """
@@ -16,6 +17,15 @@ class DownloadThread(threading.Thread):
         super(DownloadThread, self).__init__()
         self.manager = manager
         self.ui_controller = ui_controller
+
+    def fetch_links(self):
+        pass
+
+    def fetch_images(self):
+        pass
+
+    def set_wallpaper(self):
+        pass
 
     def run(self):
         """
