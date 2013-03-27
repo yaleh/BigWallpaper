@@ -1,9 +1,12 @@
 from gi.repository import GObject
-from urllib2 import urlopen
+from urllib2 import urlopen, HTTPError
 from lxml.html import parse
+from models import *
+from storm.expr import *
+from datetime import datetime
 
 import threading
-import models
+import os
 
 class DownloadThread(threading.Thread):
     """
@@ -19,13 +22,79 @@ class DownloadThread(threading.Thread):
         self.ui_controller = ui_controller
 
     def fetch_links(self):
-        pass
+        """
+        Fetch links defined in source_site.
+        """
+        
+        new_link = False
+
+        for site in store().find(SourceSite, SourceSite.active == True):
+            print "Fetching %s" % site.name
+
+            try:
+                page = urlopen(site.url)
+            except HTTPError:
+                print "Failed to fetch %s"
+                continue
+
+            p = parse(page)
+            i = p.xpath(site.xpath)[0]
+            link = i.get('src')
+
+            site.last_update = datetime.now()
+
+            store().flush()
+            store().commit()
+
+            print "Got a new image link: %s" % link           
+
+            if store().find(Image, Image.source_image_url == unicode(link)).count() > 0:
+                print "Dulplicated image link: %s" % link
+                continue
+
+            image = Image()
+            image.source_site = site
+            image.source_page_url = unicode(site.url)
+            image.source_image_url = unicode(link)
+            image.state = Image.STATE_PENDING
+            image.active_wallpaper = False
+
+            print "Created a new image object: %s" % image.source_image_url
+            
+            store().add(image)
+            store().flush()
+            store().commit()
+
+            new_link = True
+
+        return new_link
 
     def fetch_images(self):
-        pass
+        """
+        Fetch latest pending images.
+        """
 
-    def set_wallpaper(self):
-        pass
+        image_downloaded = False
+
+        for image in store().find(Image, Image.state == Image.STATE_PENDING).order_by(Desc(Image.id)):
+            temp_file = self.manager.generate_img_file(".jpg")
+
+            if self.download_img_file(temp_file[0], image.source_image_url):                
+                print "Downloaded %s: %s" % (image.source_image_url, temp_file[1])
+
+                image.image_path = unicode(temp_file[1])
+                image.download_time = datetime.now()
+                image.state = Image.STATE_DOWNLOADED
+
+                image_downloaded = True
+            else:
+                print "Failed to download %s" % image.source_image_url
+                image.state = Image.STATE_FAILED
+
+            store().flush()
+            store().commit()
+
+        return image_downloaded
 
     def run(self):
         """
@@ -44,23 +113,32 @@ class DownloadThread(threading.Thread):
         try:
             print "Get URL..."
 
-            url = self.get_bigpicture_url()
-            print url
+            reconnect_db()
 
-            if self.manager.saved_url is not None:
-                print self.manager.saved_url
+            print "Reconnected."
 
-            if url is not None and url == self.manager.saved_url:
-                # Duplicated URL, don't download
-                print "Duplicated URL"
-                return
+            self.fetch_links()
+            self.fetch_images()
 
-            temp_file = self.manager.generate_img_file(".jpg")
-            self.download_img_file(temp_file[0], url)
-            print "Downloaded %s: %s" % (url, temp_file[1])
+            self.manager.update_wallpaper()
 
-            self.manager.on_image_downloaded(image_file = temp_file[1], 
-                                        url = url)
+            # url = self.get_bigpicture_url()
+            # print url
+
+            # if self.manager.saved_url is not None:
+            #     print self.manager.saved_url
+
+            # if url is not None and url == self.manager.saved_url:
+            #     # Duplicated URL, don't download
+            #     print "Duplicated URL"
+            #     return
+
+            # temp_file = self.manager.generate_img_file(".jpg")
+            # self.download_img_file(temp_file[0], url)
+            # print "Downloaded %s: %s" % (url, temp_file[1])
+
+            # self.manager.on_image_downloaded(image_file = temp_file[1], 
+            #                             url = url)
         finally:
             GObject.idle_add(self.ui_controller.finish_updating)
             self.manager.update_lock.release()
@@ -78,7 +156,14 @@ class DownloadThread(threading.Thread):
         """
         Download the image of url.
         """
-        img = urlopen(url)
+
+        try:
+            img = urlopen(url)
+        except HTTPError:
+            return False
+
         f = os.fdopen(fd, 'w')
         f.write(img.read())
         f.close()
+
+        return True

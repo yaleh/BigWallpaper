@@ -1,5 +1,6 @@
 from download_thread import DownloadThread
-from gi.repository import Gio
+from gi.repository import Gio, GObject
+from models import *
 
 import os
 import tempfile
@@ -63,8 +64,20 @@ class WallPaperManager:
                 f_source.close()
                 f_dest.close()
 
-    def on_image_downloaded(self, image_file = None, url = None):
-        self.update_gsettings(image_file = image_file, url = url)
+    def update_wallpaper(self):
+        image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time)).one()
+
+        if image is None:
+            return
+
+        image.active_wallpaper = True
+        store().flush()
+        store().commit()
+
+        self.update_gsettings(image.image_path, image.source_image_url)
+
+    # def on_image_downloaded(self, image_file = None, url = None):
+    #     self.update_gsettings(image_file = image_file, url = url)
 
     def update_gsettings(self, image_file = None, url = None):
         print "image_file = %s, url = %s" % (image_file, url)

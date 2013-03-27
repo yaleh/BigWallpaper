@@ -1,57 +1,117 @@
-from peewee import *
+from storm.locals import *
 from gi.repository import Gio
+from datetime import datetime
 import tempfile
 
-db = SqliteDatabase(None)
+_store = None
+_db_url = None
+
+def store():
+    return _store
 
 def init_pollute():
-    SourceSite.create_table(fail_silently=True)
-    Image.create_table(fail_silently=True)
-
-    try:
-        SourceSite.get()
+    if _store is None:
         return
-    except DoesNotExist:
-        site = SourceSite.create(name = "Boston Bigpicture",
-                                 description = "Bigpicture from Boston",
-                                 last_update = "1900-1-1",
-                                 url = "http://www.boston.com/bigpicture",
-                                 xpath = '/descendant::img[@class="bpImage"]')
-        site.save()
+
+    # see https://storm.canonical.com/Manual for the properties mapping
+
+    _store.execute("""
+CREATE TABLE IF NOT EXISTS source_site(
+    id INTEGER PRIMARY KEY,
+    name VARCHAR,
+    description VARCHAR,
+    last_update VARCHAR,
+    url VARCHAR,
+    xpath VARCHAR,
+    active INT
+)
+""")
+    _store.execute("""
+CREATE TABLE IF NOT EXISTS image(
+id INTEGER PRIMARY KEY,
+    source_site_id INTEGER,
+    source_page_url VARCHAR,
+    source_image_url VARCHAR,
+    source_title VARCHAR,
+    source_description VARCHAR,
+    download_time VARCHAR,
+    image_path VARCHAR,
+    state VARCHAR,
+    active_wallpaper INT
+)
+""")
+
+    if _store.find(SourceSite).count() == 0:
+        site = SourceSite()
+        site.name = u"Boston Bigpicture"
+        site.description = u"Bigpicture from Boston"
+        site.last_update = datetime(1900, 1, 1)
+        site.url = u"http://www.boston.com/bigpicture"
+        site.xpath = u'/descendant::img[@class="bpImage"]'
+        site.active = True
+
+        _store.add(site)
+        _store.flush()
+        _store.commit()
+
+# def set_db_path(path):
+#     global _db_url
+
+#     _db_url = "sqlite:%s" % path
 
 def connect_db(path):
-    global db
-    db.init(path, check_same_thread=False)
+    global _store, _db_url
+    _db_url = "sqlite:%s" % path
+
+# def connect_db():
+#     global _store, _db_url
+
+    database = create_database(_db_url)
+    _store = Store(database)
     init_pollute()
 
-class BaseModel(Model):
-    class Meta:
-        database = db
+def reconnect_db():
+    global _store, _db_url
 
-class SourceSite(BaseModel):
-    name = CharField()
-    description = CharField(null=True)
-    last_update = DateTimeField(null=True)
-    url = CharField()
-    xpath = CharField()
+    database = create_database(_db_url)
+    _store = Store(database)
+
+class SourceSite(object):
+    __storm_table__ = "source_site"
+
+    id = Int(primary = True)
+    name = Unicode()
+    description = Unicode()
+    last_update = DateTime()
+    url = Unicode()
+    xpath = Unicode()
+    active = Bool()
 
 SCHEMA = 'org.gnome.desktop.background'
 KEY = 'picture-uri'
 
-class Image(BaseModel):
-    source_site = ForeignKeyField(SourceSite, related_name = "images")
-    source_page_url = CharField()
-    source_image_url = CharField()
-    source_title = CharField()
-    source_description = CharField()
-    download_time = DateTimeField()
-    image_path = CharField()
-    available = BooleanField()
-    active_wallpaper = BooleanField()
+class Image(object):
+    STATE_PENDING = u"PENDING"
+    STATE_DOWNLOADED = u"DOWNLOADED"
+    STATE_FAILED = u"FAILED"
+
+    __storm_table__ = "image"
+
+    id = Int(primary = True)
+    source_site_id = Int()
+    source_site = Reference(source_site_id, SourceSite.id)
+    source_page_url = Unicode()
+    source_image_url = Unicode()
+    source_title = Unicode()
+    source_description = Unicode()
+    download_time = DateTime()
+    image_path = Unicode()
+    state = Unicode() # available state: PENDING, DOWNLOADED, FAILED
+    active_wallpaper = Bool()
 
     image_dir = ""
 
-    def activate_wallpaper(self):
+    def activate_wallpaper(self, ui_controller):
         if self.active_wallpaper:
             return True
 
@@ -60,10 +120,10 @@ class Image(BaseModel):
 
         gsettings = Gio.Settings.new(SCHEMA)
         gsettings.set_string(KEY, "file://" + self.image_path)
-        GObject.idle_add(self.ui_controller.notify_wallpaper_update)
+        GObject.idle_add(ui_controller.notify_wallpaper_update)
 
         self.active_wallpaper = True
-        self.save()
+        _store.flush()
 
         return True        
 
