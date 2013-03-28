@@ -38,8 +38,11 @@ class DownloadThread(threading.Thread):
                 continue
 
             p = parse(page)
-            i = p.xpath(site.xpath)[0]
-            link = i.get('src')
+            try:
+                link = p.xpath(site.image_xpath)[0]
+            except IndexError:
+                print "Failed to parse image path."
+                continue
 
             site.last_update = datetime.now()
 
@@ -54,10 +57,30 @@ class DownloadThread(threading.Thread):
 
             image = Image()
             image.source_site = site
-            image.source_page_url = unicode(site.url)
             image.source_image_url = unicode(link)
             image.state = Image.STATE_PENDING
             image.active_wallpaper = False
+
+            try:
+                image.source_link = unicode(p.xpath(site.link_xpath)[0])
+            except IndexError:
+                print "Failed to parse link."
+                image.source_link = None
+                continue
+
+            try:
+                image.source_title = unicode(p.xpath(site.title_xpath)[0])
+            except IndexError:
+                print "Failed to parse title."
+                image.source_title = None
+                continue
+
+            try:
+                image.source_description = unicode(p.xpath(site.description_xpath)[0])
+            except IndexError:
+                print "Failed to parse decription."
+                image.source_description = None
+                continue
 
             print "Created a new image object: %s" % image.source_image_url
             

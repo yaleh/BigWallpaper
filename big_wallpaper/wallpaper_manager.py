@@ -1,6 +1,7 @@
 from download_thread import DownloadThread
 from gi.repository import Gio, GObject
 from models import *
+from storm.expr import And
 
 import os
 import tempfile
@@ -70,45 +71,61 @@ class WallPaperManager:
         if image is None:
             return
 
+        if image.active_wallpaper == True:
+            return
+
+        # delete image files except the one to set as wallpaper
+        for old_image in store().find(Image,
+                                      And(Image.state == Image.STATE_DOWNLOADED,
+                                          Image.active_wallpaper == True)):
+            if old_image.image_path is not None:
+                try:
+                    os.unlink(old_image.image_path)
+                except (IOError, OSError):
+                    pass
+            
+            old_image.state = Image.STATE_DELETED
+            old_image.active_wallpaper = False
+
+            store.flush()
+            store.commit()
+
+        try:
+            os.unlink(self.img_file)
+        except (IOError, OSError):
+            pass
+
+        # set a new wallpaper
         image.active_wallpaper = True
         store().flush()
         store().commit()
 
-        self.update_gsettings(image.image_path, image.source_image_url)
+        self.update_gsettings(image.image_path)
 
     # def on_image_downloaded(self, image_file = None, url = None):
     #     self.update_gsettings(image_file = image_file, url = url)
 
-    def update_gsettings(self, image_file = None, url = None):
-        print "image_file = %s, url = %s" % (image_file, url)
-        print "Current real_img_file = %s, saved_url = %s" % \
-            (self.real_img_file, self.saved_url)
-        if image_file is not None and image_file != self.real_img_file:
-            # delete old image file, and update symbol link
-            try:
-                print "Delete old files..."
-                if self.real_img_file is not None:
-                    os.unlink(self.real_img_file) 
-                os.unlink(self.img_file)
-            except (IOError, OSError):
-                pass
+    def update_gsettings(self, image_file = None):
+        print "image_file = %s" % (image_file)
+        # print "Current real_img_file = %s, saved_url = %s" % \
+        #     (self.real_img_file, self.saved_url)
+        if image_file is not None:
 
             print "Make new link: %s %s" % (image_file, self.img_file)
             os.symlink(image_file, self.img_file)
-            self.real_img_file = image_file
+            # self.real_img_file = image_file
 
-        if url is not None:
-            print "Saving URL %s to %s" % (url, self.url_file)
-            self.saved_url = url
+        # if url is not None:
+        #     print "Saving URL %s to %s" % (url, self.url_file)
+        #     self.saved_url = url
 
-            f = open(self.url_file, "w")
-            f.write(url)
-            f.close()
+        #     f = open(self.url_file, "w")
+        #     f.write(url)
+        #     f.close()
 
-        if self.real_img_file is not None and \
-                self.wp_url != "file://" + self.real_img_file:
+        if self.wp_url != "file://" + image_file:
             gsettings = Gio.Settings.new(self.SCHEMA)
-            gsettings.set_string(self.KEY, "file://" + self.real_img_file)
+            gsettings.set_string(self.KEY, "file://" + image_file)
             GObject.idle_add(self.ui_controller.notify_wallpaper_update)
 
     def update_saved_content(self, image_file = None):
@@ -135,8 +152,9 @@ class WallPaperManager:
             os.mkdir(self.img_dir)
         except OSError:
             pass
-        self.update_saved_content()
-        self.update_gsettings()
+        # self.update_saved_content()
+        # self.update_gsettings()
+        self.update_wallpaper()
 
     def update(self):
         print "Updating..."

@@ -22,7 +22,10 @@ CREATE TABLE IF NOT EXISTS source_site(
     description VARCHAR,
     last_update VARCHAR,
     url VARCHAR,
-    xpath VARCHAR,
+    link_xpath VARCHAR,
+    image_xpath VARCHAR,
+    title_xpath VARCHAR,
+    description_xpath VARCHAR,
     active INT
 )
 """)
@@ -30,7 +33,7 @@ CREATE TABLE IF NOT EXISTS source_site(
 CREATE TABLE IF NOT EXISTS image(
 id INTEGER PRIMARY KEY,
     source_site_id INTEGER,
-    source_page_url VARCHAR,
+    source_link VARCHAR,
     source_image_url VARCHAR,
     source_title VARCHAR,
     source_description VARCHAR,
@@ -47,7 +50,10 @@ id INTEGER PRIMARY KEY,
         site.description = u"Bigpicture from Boston"
         site.last_update = datetime(1900, 1, 1)
         site.url = u"http://www.boston.com/bigpicture"
-        site.xpath = u'/descendant::img[@class="bpImage"]'
+        site.link_xpath = u'//img[@class="bpImage"]/parent::a/@href'
+        site.image_xpath = u'//img[@class="bpImage"]/@src'
+        site.title_xpath = u'//div[@class="headDiv2"]/h2/a/text()'
+        site.description_xpath = u'//div[@class="bpBody"]/text()'
         site.active = True
 
         _store.add(site)
@@ -84,7 +90,10 @@ class SourceSite(object):
     description = Unicode()
     last_update = DateTime()
     url = Unicode()
-    xpath = Unicode()
+    link_xpath = Unicode()
+    image_xpath = Unicode()
+    title_xpath = Unicode()
+    description_xpath = Unicode()
     active = Bool()
 
 SCHEMA = 'org.gnome.desktop.background'
@@ -94,19 +103,20 @@ class Image(object):
     STATE_PENDING = u"PENDING"
     STATE_DOWNLOADED = u"DOWNLOADED"
     STATE_FAILED = u"FAILED"
+    STATE_DELETED = u"DELETED"
 
     __storm_table__ = "image"
 
     id = Int(primary = True)
     source_site_id = Int()
     source_site = Reference(source_site_id, SourceSite.id)
-    source_page_url = Unicode()
+    source_link = Unicode()
     source_image_url = Unicode()
     source_title = Unicode()
     source_description = Unicode()
     download_time = DateTime()
     image_path = Unicode()
-    state = Unicode() # available state: PENDING, DOWNLOADED, FAILED
+    state = Unicode() # available state: PENDING, DOWNLOADED, FAILED, DELETED
     active_wallpaper = Bool()
 
     image_dir = ""
