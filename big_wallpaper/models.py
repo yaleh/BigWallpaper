@@ -3,10 +3,15 @@ from gi.repository import Gio
 from datetime import datetime
 import tempfile
 
+_database = None
 _store = None
 _db_url = None
 
 def store():
+    global _database, _store
+
+    if _database is not None and (_store is None or _store._connection._closed):
+        _store = Store(_database)
     return _store
 
 def init_pollute():
@@ -60,27 +65,15 @@ id INTEGER PRIMARY KEY,
         _store.flush()
         _store.commit()
 
-# def set_db_path(path):
-#     global _db_url
-
-#     _db_url = "sqlite:%s" % path
-
 def connect_db(path):
-    global _store, _db_url
+    global _store, _db_url, _database
     _db_url = "sqlite:%s" % path
 
-# def connect_db():
-#     global _store, _db_url
-
-    database = create_database(_db_url)
-    _store = Store(database)
+    _database = create_database(_db_url)
+    _store = Store(_database)
     init_pollute()
-
-def reconnect_db():
-    global _store, _db_url
-
-    database = create_database(_db_url)
-    _store = Store(database)
+    _store.close()
+    _store = None
 
 class SourceSite(object):
     __storm_table__ = "source_site"
@@ -121,22 +114,6 @@ class Image(object):
 
     image_dir = ""
 
-    def activate_wallpaper(self, ui_controller):
-        if self.active_wallpaper:
-            return True
-
-        if self.saved_path is None:
-            return False
-
-        gsettings = Gio.Settings.new(SCHEMA)
-        gsettings.set_string(KEY, "file://" + self.image_path)
-        GObject.idle_add(ui_controller.notify_wallpaper_update)
-
-        self.active_wallpaper = True
-        _store.flush()
-
-        return True        
-
     @staticmethod
     def generate_img_file(suffix):
         return tempfile.mkstemp(suffix=suffix, dir=image_dir)
@@ -144,16 +121,4 @@ class Image(object):
     @staticmethod
     def set_image_dir(path):
         image_dir = path
-
-    @staticmethod
-    def set_wallpaper(image):
-        org_wallpaper = Image.get(Image.active_wallpaper == True)
-        if org_wallpaper.id == image.id:
-            return
-
-        org_wallpaper.active_wallpaper = False
-        org_wallpaper.save()
-
-        image.activate_wallpaper()
-        
 
