@@ -104,7 +104,7 @@ class WallPaperManager:
         if self.wp_url != "file://" + image.image_path:
             gsettings = Gio.Settings.new(self.SCHEMA)
             gsettings.set_string(self.KEY, "file://" + image.image_path)
-            GObject.idle_add(lambda: self.ui_controller.notify_wallpaper_update(body=image.source_title))
+            GObject.idle_add(lambda: self.ui_controller.notify_wallpaper_update(image))
 
     def update_saved_content(self, image_file = None):
         # get saved URL

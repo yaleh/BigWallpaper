@@ -54,13 +54,11 @@ class UIController:
 
         self.update_menu()
 
-        self.ind.set_menu(self.menu)
-
     def update_menu(self):
         # create a menu
         self.menu = Gtk.Menu()
 
-        image_title = 'No Title'
+        image_title = 'No Image'
         try:
             image = store().find(Image, Image.active_wallpaper == True).one()
             if image is not None:
@@ -105,6 +103,8 @@ class UIController:
         self.menu.append(quit_item)
         self.menu.show_all()        
 
+        self.ind.set_menu(self.menu)
+
     def start_updating(self):
         self.update_item.set_sensitive(False)
         self.update_item.set_label("Updating...")
@@ -134,11 +134,12 @@ class UIController:
         dialog.run()
         dialog.destroy()
 
-    def notify_wallpaper_update( \
-        self, title="New Wallpaper",
-        body="A new wallpaper was updated by BigWallpaper."):
+    def notify_wallpaper_update(self, image):
         if not Notify.init ("BigWallpaper"):
             return
-        n = Notify.Notification.new(title, body,
-                                    "dialog-information")
+        n = Notify.Notification.new("A new wallpaper by BigWallpaper",
+                                    image.source_title,
+                                    image.image_path)
+                                    # "dialog-information")
         n.show ()
+        self.update_menu()

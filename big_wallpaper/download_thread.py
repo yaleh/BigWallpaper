@@ -136,33 +136,16 @@ class DownloadThread(threading.Thread):
         try:
             print "Get URL..."
 
-            reconnect_db()
-
             print "Reconnected."
 
             self.fetch_links()
             self.fetch_images()
 
             self.manager.update_wallpaper()
-
-            # url = self.get_bigpicture_url()
-            # print url
-
-            # if self.manager.saved_url is not None:
-            #     print self.manager.saved_url
-
-            # if url is not None and url == self.manager.saved_url:
-            #     # Duplicated URL, don't download
-            #     print "Duplicated URL"
-            #     return
-
-            # temp_file = self.manager.generate_img_file(".jpg")
-            # self.download_img_file(temp_file[0], url)
-            # print "Downloaded %s: %s" % (url, temp_file[1])
-
-            # self.manager.on_image_downloaded(image_file = temp_file[1], 
-            #                             url = url)
         finally:
+            if store() is not None:
+                store().close()
+
             GObject.idle_add(self.ui_controller.finish_updating)
             self.manager.update_lock.release()
 
