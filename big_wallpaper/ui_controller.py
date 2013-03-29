@@ -60,7 +60,7 @@ class UIController:
 
         image_title = 'No Image'
         try:
-            image = store().find(Image, Image.active_wallpaper == True).one()
+            image = store().find(Image, Image.active_wallpaper == True).any()
             if image is not None:
                 image_title = "%s (%s)" % (image.source_title, image.source_site.name)
         finally:

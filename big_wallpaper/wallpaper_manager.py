@@ -65,7 +65,7 @@ class WallPaperManager:
 
     def update_wallpaper(self):
         try:
-            image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time)).one()
+            image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time)).first()
 
             if image is None:
                 return
@@ -86,8 +86,8 @@ class WallPaperManager:
                 old_image.state = Image.STATE_DELETED
                 old_image.active_wallpaper = False
 
-                store.flush()
-                store.commit()
+                store().flush()
+                store().commit()
 
             # set a new wallpaper
             image.active_wallpaper = True

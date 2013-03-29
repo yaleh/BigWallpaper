@@ -2,11 +2,11 @@ Source: big-wallpaper
 Maintainer: Yale Huang <yale.huang@trantect.com>
 Section: python
 Priority: optional
-Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7.4.3), python-lxml (>= 2.3.0-1)
+Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7.4.3)
 Standards-Version: 3.9.1
 
 Package: python-big-wallpaper
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}
+Depends: ${misc:Depends}, ${python:Depends}, python-lxml (>= 2.3.0-1), python-storm (>= 0.19-1)
 Description: Update Unity wallpaper with images from Boston Bigpicture
  A Python based wallpaper updating applet from Boston BigPicture for Unity.

@@ -1,5 +1,5 @@
 from gi.repository import GObject
-from urllib2 import urlopen, HTTPError
+from urllib2 import urlopen, HTTPError, URLError
 from lxml.html import parse
 from models import *
 from storm.expr import *
@@ -33,7 +33,7 @@ class DownloadThread(threading.Thread):
 
             try:
                 page = urlopen(site.url)
-            except HTTPError:
+            except (HTTPError, URLError):
                 print "Failed to fetch %s"
                 continue
 
@@ -63,21 +63,21 @@ class DownloadThread(threading.Thread):
 
             try:
                 image.source_link = unicode(p.xpath(site.link_xpath)[0])
-            except IndexError:
+            except (IndexError, TypeError):
                 print "Failed to parse link."
                 image.source_link = None
                 continue
 
             try:
                 image.source_title = unicode(p.xpath(site.title_xpath)[0])
-            except IndexError:
+            except (IndexError, TypeError):
                 print "Failed to parse title."
                 image.source_title = None
                 continue
 
             try:
                 image.source_description = unicode(p.xpath(site.description_xpath)[0])
-            except IndexError:
+            except (IndexError, TypeError):
                 print "Failed to parse decription."
                 image.source_description = None
                 continue
@@ -149,15 +149,6 @@ class DownloadThread(threading.Thread):
             GObject.idle_add(self.ui_controller.finish_updating)
             self.manager.update_lock.release()
 
-    def get_bigpicture_url(self):
-        """
-        Find the first bpImage at http://www.boston.com/bigpicture .
-        """
-        page = urlopen('http://www.boston.com/bigpicture')
-        p = parse(page)
-        i = p.xpath('/descendant::img[@class="bpImage"]')[0]
-        return i.get('src')
-
     def download_img_file(self, fd, url):
         """
         Download the image of url.
@@ -165,7 +156,7 @@ class DownloadThread(threading.Thread):
 
         try:
             img = urlopen(url)
-        except HTTPError:
+        except (HTTPError, URLError, IOError):
             return False
 
         f = os.fdopen(fd, 'w')
