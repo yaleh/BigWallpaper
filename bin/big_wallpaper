@@ -65,6 +65,9 @@ if __name__ == "__main__":
 
     config = Config(sys.argv)
 
+    if not os.path.exists(config.get_options().dest):
+        os.makedirs(config.get_options().dest)
+
     models.connect_db("%s/%s" % (config.get_options().dest, DB_FILENAME))
 
     GObject.threads_init()
