@@ -62,7 +62,7 @@ class UIController:
         try:
             image = store().find(Image, Image.active_wallpaper == True).one()
             if image is not None:
-                image_title = image.source_title
+                image_title = "%s (%s)" % (image.source_title, image.source_site.name)
         finally:
             store().close()
 

@@ -51,7 +51,7 @@ id INTEGER PRIMARY KEY,
 
     if _store.find(SourceSite).count() == 0:
         site = SourceSite()
-        site.name = u"Boston Bigpicture"
+        site.name = u"Boston BigPicture"
         site.description = u"Bigpicture from Boston"
         site.last_update = datetime(1900, 1, 1)
         site.url = u"http://www.boston.com/bigpicture"

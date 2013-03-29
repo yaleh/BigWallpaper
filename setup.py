@@ -23,12 +23,13 @@ import glob
 
 setup(
     name = 'big_wallpaper',
-    version = '0.1',
+    version = '0.2',
     description = 'Update Unity wallpaper with images from Boston Bigpicture',
     author = 'Yale Huang',
     author_email = 'yale.huang@trantect.com',
     url = 'https://github.com/yaleh/BigWallpaper',
     packages = ['big_wallpaper'],
+#    package_dir={'big_wallpaper': 'big_wallpaper'},
     scripts = ['bin/big_wallpaper'],
     license = "LICENSE.txt",
     data_files = [
