@@ -4,7 +4,7 @@ big-wallpaper (0.2-1) precise; urgency=low
   * A menu item with a title of the image and link a to the web page
   * Show thumbnail in the notification
 
- -- Yale Huang <yale@yale-MacBookAir>  Fri, 29 Mar 2013 11:04:57 +0800
+ -- Yale Huang <yale.huang@trantect.com>  Fri, 29 Mar 2013 11:13:44 +0800
 
 big-wallpaper (0.1-1) unstable; urgency=low
 
