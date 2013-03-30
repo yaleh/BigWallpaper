@@ -20,3 +20,13 @@ Python based wallpaper updating applet from Boston BigPicture for Unity.
 ### Clean folder debian (optional)
 
 	debuild clean
+
+## Install with PPA repository (Ubuntu)
+
+	sudo add-apt-repository ppa:yale-huang/ppa
+	sudo apt-get update
+	sudo apt-get install python-big-wallpaper
+	
+## Run it
+
+Type ```BigWallpaper``` in the *Dash Home* of Unity launcher, and click the icon.
