@@ -72,8 +72,9 @@ if __name__ == "__main__":
 
     GObject.threads_init()
     manager = WallPaperManager( \
-         prefix_dir = os.path.expanduser(config.get_options().prefix),
-         img_dir=os.path.expanduser(config.get_options().dest))
+        config,
+        prefix_dir = os.path.expanduser(config.get_options().prefix),
+        img_dir=os.path.expanduser(config.get_options().dest))
 
     timer = UpdateTimer(interval=config.get_options().interval)
     ui_controller = UIController(manager, config,

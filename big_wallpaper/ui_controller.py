@@ -2,7 +2,15 @@ from gi.repository import Gio, Gtk, GObject, AppIndicator3, Notify
 from models import *
 
 class AnimationTimer:
+    """
+    Timer of icon animation.
+    """
+
     def __init__(self, ui_controller, interval, icons):
+        """
+        Constructor of AnimationTimer.
+        """
+
         self.interval = interval
         self.icons = icons
         self.current_icon_index = 0
@@ -14,10 +22,20 @@ class AnimationTimer:
         self.timer_id = GObject.timeout_add(self.interval, self.on_timer)
 
     def cancel(self):
+        """
+        Cancel animation.
+        """
+
         GObject.source_remove(self.timer_id)
         self.timer_id = None
 
     def on_timer(self):
+        """
+        Callback of timer.
+
+        Show the next icon.
+        """
+
         try:
             self.current_icon_index += 1
             self.current_icon_index %= len(self.icons)
@@ -28,6 +46,10 @@ class AnimationTimer:
             return True # continue
 
 class UIController:
+    """
+    UI controller for GTK.
+    """
+
     ICON_FILE = 'big_wallpaper_small.png'
     UPDATING_ICON_FILES = ['big_wallpaper_updating_1.png',
                            'big_wallpaper_updating_2.png',
@@ -36,6 +58,10 @@ class UIController:
                            'big_wallpaper_updating_5.png']
     
     def __init__(self, manager, config, icon_dir=None):
+        """
+        Constructor of UIController.
+        """
+
         # global manager, config
 
         self.manager = manager
@@ -55,6 +81,15 @@ class UIController:
         self.update_menu()
 
     def update_menu(self):
+        """
+        Update the menu.
+
+        Update menu with following status:
+        * Current wallpaper
+        * Downloading status
+        * Auto-start setting
+        """
+
         # create a menu
         self.menu = Gtk.Menu()
 
@@ -106,6 +141,12 @@ class UIController:
         self.ind.set_menu(self.menu)
 
     def start_updating(self):
+        """
+        Start updating.
+
+        Update menu item. Start animation.
+        """
+
         self.update_item.set_sensitive(False)
         self.update_item.set_label("Updating...")
 
@@ -115,6 +156,12 @@ class UIController:
                 self.UPDATING_ICON_FILES) )
 
     def finish_updating(self):
+        """
+        Finish updating.
+
+        Update menu itme. Stop animation.
+        """
+
         self.update_item.set_sensitive(True)
         self.update_item.set_label("Update Now")
 
@@ -125,9 +172,17 @@ class UIController:
         self.ind.set_icon("%s/%s" % (self.icon_dir, self.ICON_FILE))
 
     def update_appindicator(self, icon):
+        """
+        Update appindicator for icon animation.
+        """
+
         self.ind.set_icon(icon)
 
     def show_message_dialog(self, title, message):
+        """
+        DEFUNCT. Message dialog on setting a new wallpaer.
+        """
+
         dialog = Gtk.MessageDialog(None, 0, Gtk.MessageType.INFO,
                                    Gtk.ButtonsType.OK, title)
         dialog.format_secondary_text(message)
@@ -135,6 +190,10 @@ class UIController:
         dialog.destroy()
 
     def notify_wallpaper_update(self, image):
+        """
+        Notification popup on setting a new wallpaper.
+        """
+
         if not Notify.init ("BigWallpaper"):
             return
         n = Notify.Notification.new("A new wallpaper by BigWallpaper",
