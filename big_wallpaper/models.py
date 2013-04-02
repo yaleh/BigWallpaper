@@ -45,7 +45,8 @@ id INTEGER PRIMARY KEY,
     download_time VARCHAR,
     image_path VARCHAR,
     state VARCHAR,
-    active_wallpaper INT
+    active_wallpaper INT,
+    active_time VARCHAR
 )
 """)
 
@@ -137,6 +138,8 @@ class Image(object):
     STATE_DOWNLOADED = u"DOWNLOADED"
     STATE_FAILED = u"FAILED"
     STATE_DELETED = u"DELETED"
+    STATE_QUEUED = u"QUEUED"
+    STATE_EXPIRED = u"EXPIRED"
 
     __storm_table__ = "image"
 
@@ -151,6 +154,7 @@ class Image(object):
     image_path = Unicode()
     state = Unicode() # available state: PENDING, DOWNLOADED, FAILED, DELETED
     active_wallpaper = Bool()
+    active_time = DateTime(default = None)
 
     image_dir = ""
 
