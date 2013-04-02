@@ -35,9 +35,9 @@ class DownloadThread(threading.Thread):
             print "Fetching %s" % site.name
 
             try:
-                page = urlopen(site.url, self.config.get_options().timeout)
-            except (HTTPError, URLError):
-                print "Failed to fetch %s"
+                page = urlopen(site.url, timeout=self.config.get_options().timeout)
+            except (HTTPError, URLError, TypeError):
+                print "Failed to fetch %s" % site.url
                 continue
 
             try:
@@ -163,12 +163,16 @@ class DownloadThread(threading.Thread):
         """
 
         try:
-            img = urlopen(url)
-        except (HTTPError, URLError, IOError):
+            img = urlopen(url, timeout=self.config.get_options().timeout)
+        except (HTTPError, URLError, IOError, TypeError):
             return False
 
-        f = os.fdopen(fd, 'w')
-        f.write(img.read())
-        f.close()
+        try:
+            f = os.fdopen(fd, 'w')
+            f.write(img.read())
+            f.close()
+        except (HTTPException, IndexError, socket.error):
+            print "Failed to download image: %s" % url
+            return False
 
         return True

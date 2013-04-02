@@ -106,20 +106,31 @@ class WallPaperManager:
         store().flush()
         store().commit()
 
-    def estimate_next_image(self):
+    def calculate_updating_cycle(self):
         """
-        Estimate the time when the next image will downloaded.
+        Calculate the cycle of wallpaper updating.
         """
 
+        # Estimate the time when the next image will downloaded.
         keep_timestamp = datetime.now() - timedelta(seconds=self.config.get_options().keep)
         queued_images = store().find(Image,
                                      And(Image.state == Image.STATE_DOWNLOADED,
                                          Image.download_time >= keep_timestamp,
                                          Image.active_wallpaper == False))
+        downloading_cycle = 0;
         if queued_images.count() == 0:
-            return datetime.now() + timedelta(seconds=self.config.get_options().keep)
+            downloading_cycle = timedelta(seconds=self.config.get_options().keep)
+        else:
+            downloading_cycle = timedelta(seconds=self.config.get_options().keep) / queued_images.count()
 
-        return datetime.now() + timedelta(seconds=self.config.get_options().keep) / queued_images.count()
+            last_image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time)).first()
+
+        images_to_show = queued_images.count()
+        display_time_per_image = downloading_cycle / images_to_show \
+            if images_to_show != 0 \
+            else timedelta(seconds=self.config.get_options().keep)
+
+        return display_time_per_image
 
     def update_wallpaper(self):
         """
@@ -180,20 +191,8 @@ class WallPaperManager:
         store().commit()            
         self.delete_expired_images()
 
-        # Estimate the time of next image will be successfully fetched.
-        # Ajust the switching fequency so that all pending images can be displayed
-        # before it.
-
-        next_image_estimation = self.estimate_next_image()
-        time_to_next_image = next_image_estimation - datetime.now()
-        print "Time to next image: %d seconds" % time_to_next_image.total_seconds()
-        images_to_show = store().find(Image,
-                       And(Image.state == Image.STATE_DOWNLOADED,
-                           Image.active_wallpaper == False)).count()
-        print "Images to show: %d" % images_to_show
-        display_time_per_image = time_to_next_image / images_to_show \
-            if images_to_show != 0 \
-            else timedelta(seconds=self.config.get_options().keep)
+        # Calcualte the updating cycle
+        display_time_per_image = self.calculate_updating_cycle()
         print "Display time per image: %d" % display_time_per_image.total_seconds()
 
         # did the current wallpaper expire?
@@ -206,6 +205,8 @@ class WallPaperManager:
 
             if current_wallpaper.active_time >= datetime.now() - display_time_per_image:
                 # not expired, nothing to do
+                print "Time till the coming wallpaper switching: %d" % \
+                    (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds()
                 return current_wallpaper
 
             current_wallpaper.state = Image.STATE_EXPIRED
