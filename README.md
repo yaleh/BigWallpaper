@@ -17,6 +17,10 @@ Python based wallpaper updating applet from Boston BigPicture for Unity.
 
     debuild -us -uc -b
 
+### Build DSC file (optional, for PPA)
+	
+	debuild -tc -S -sa
+
 ### Clean folder debian (optional)
 
 	debuild clean

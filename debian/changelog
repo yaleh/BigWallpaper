@@ -1,3 +1,9 @@
+big-wallpaper (0.3-1) precise; urgency=low
+
+  * Scheduled download images and applied them as wallpaper in turn.
+
+ -- Yale Huang <yale.huang@trantect.com>  Wed, 03 Apr 2013 17:46:19 +0800
+
 big-wallpaper (0.2-1) precise; urgency=low
 
   * Applied SQLite for downloading record
