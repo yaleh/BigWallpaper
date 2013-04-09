@@ -139,8 +139,8 @@ class WallPaperManager:
 
         try:
             image = self.get_wallpaper_image()
-            print "New wallpaper image: %s" % image.image_path
             if image is not None:
+                print "New wallpaper image: %s" % image.image_path
                 self.update_gsettings(image)
         finally:
             store().close()
