@@ -1,3 +1,9 @@
+big-wallpaper (0.3-6) precise; urgency=low
+
+  * Fixed a bug of set wallpaper when all images expired.
+
+ -- Yale Huang <yale.huang@trantect.com>  Sat, 13 Apr 2013 18:12:07 +0800
+
 big-wallpaper (0.3-5) precise; urgency=low
 
   * Fixed a bug of DB accessing.

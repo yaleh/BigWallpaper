@@ -165,9 +165,8 @@ class WallPaperManager:
                         And(Image.state == Image.STATE_DOWNLOADED,
                             Image.download_time >= keep_timestamp)).count() == 0:
             downloaded_images = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time))
+            wallpaper = downloaded_images.first()
             downloaded_images.set(state = Image.STATE_EXPIRED)
-
-            wallpaper = downloaded_images.last()
             wallpaper.state = Image.STATE_DOWNLOADED
 
             store().flush()
@@ -178,7 +177,7 @@ class WallPaperManager:
 
             # set the new wallpaper
             # self.active_wallpaper(wallpaper)
-            self.update_wallpaper_record(image)
+            self.update_wallpaper_record(wallpaper)
 
             return wallpaper
 
