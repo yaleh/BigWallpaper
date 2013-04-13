@@ -164,7 +164,7 @@ class WallPaperManager:
         if store().find(Image,
                         And(Image.state == Image.STATE_DOWNLOADED,
                             Image.download_time >= keep_timestamp)).count() == 0:
-            downloaded_images = store.find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time))
+            downloaded_images = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time))
             downloaded_images.set(state = Image.STATE_EXPIRED)
 
             wallpaper = downloaded_images.last()
