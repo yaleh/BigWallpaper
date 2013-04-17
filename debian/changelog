@@ -1,3 +1,11 @@
+big-wallpaper (0.2-1) precise; urgency=low
+
+  * Applied SQLite for downloading record
+  * A menu item with a title of the image and link a to the web page
+  * Show thumbnail in the notification
+
+ -- Yale Huang <yale.huang@trantect.com>  Fri, 29 Mar 2013 11:13:44 +0800
+
 big-wallpaper (0.1-1) unstable; urgency=low
 
   * source package automatically created by stdeb 0.6.0+git

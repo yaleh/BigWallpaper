@@ -4,6 +4,11 @@ LICENSE.txt
 README.txt
 setup.py
 big_wallpaper/__init__.py
+big_wallpaper/config.py
+big_wallpaper/download_thread.py
+big_wallpaper/models.py
+big_wallpaper/ui_controller.py
+big_wallpaper/wallpaper_manager.py
 bin/big_wallpaper
 share/big_wallpaper.desktop
 share/pixmaps/big_wallpaper.png
@@ -12,3 +17,5 @@ share/pixmaps/big_wallpaper_updating_1.png
 share/pixmaps/big_wallpaper_updating_2.png
 share/pixmaps/big_wallpaper_updating_3.png
 share/pixmaps/big_wallpaper_updating_4.png
+share/pixmaps/big_wallpaper_updating_5.png
+share/pixmaps/watermark.png
