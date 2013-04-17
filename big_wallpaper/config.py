@@ -10,14 +10,20 @@ class Config:
         parser.add_option("-c", "--config-file", dest="config", default="",
                           metavar="FILE", help="Config file")
         parser.add_option("-p", "--prefix", dest="prefix", type="string",
-                          help="path prefix for app resources",
+                          help="path prefix for app resources [default: %default]",
                           default="/usr/share/big_wallpaper")
         parser.add_option("-d", "--dest", dest="dest", type="string",
-                          help="dest dir for download image files",
+                          help="dest dir for download image files [default: %default]",
                           default=os.path.expanduser('~/.big_wallpaper'))
         parser.add_option("-i", "--interval", dest="interval", type="int",
-                          help="interval of updating in seconds",
+                          help="interval of updating in seconds [default: %default]",
                           default=1800000)
+        parser.add_option("-k", "--keep", dest="keep", type="int",
+                          help="Duration to keep the downloaded images (in seconds) [default: %default]",
+                          default=60*60*24)
+        parser.add_option("-t", "--timeout", dest="timeout", type="int",
+                          help="Timeout of every page/image downloading (in seconds) [default: %default]",
+                          default=60)
 
         # Actually, only CONFIG is necessary for this parse_arg()
         (self.options, pending_args) = parser.parse_args(args)
@@ -55,6 +61,10 @@ class Config:
                    self.options.dest)
         config.set(self.BIGWALLPAPER_SECTION, 'prefix', 
                    self.options.prefix)
+        config.set(self.BIGWALLPAPER_SECTION, 'keep',
+                   "%d" % self.options.keep)
+        config.set(self.BIGWALLPAPER_SECTION, 'timeout',
+                   "%d" % self.options.timeout)
 
         f = None
 

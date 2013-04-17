@@ -1,3 +1,45 @@
+big-wallpaper (0.3-6) precise; urgency=low
+
+  * Fixed a bug of set wallpaper when all images expired.
+
+ -- Yale Huang <yale.huang@trantect.com>  Sat, 13 Apr 2013 18:12:07 +0800
+
+big-wallpaper (0.3-5) precise; urgency=low
+
+  * Fixed a bug of DB accessing.
+
+ -- Yale Huang <yale.huang@trantect.com>  Sat, 13 Apr 2013 15:31:59 +0800
+
+big-wallpaper (0.3-4) oneiric; urgency=low
+
+  * Updated dependencies for Oneiric.
+
+ -- Yale Huang <yale.huang@trantect.com>  Tue, 09 Apr 2013 17:46:37 +0800
+
+big-wallpaper (0.3-2) quantal; urgency=low
+
+  * Multiple distributions.
+
+ -- Yale Huang <yale.huang@trantect.com>  Wed, 09 Apr 2013 17:46:19 +0800
+
+big-wallpaper (0.3-2) precise; urgency=low
+
+  * Multiple distributions.
+
+ -- Yale Huang <yale.huang@trantect.com>  Wed, 09 Apr 2013 17:46:19 +0800
+
+big-wallpaper (0.3-2) oneiric; urgency=low
+
+  * Multiple distributions.
+
+ -- Yale Huang <yale.huang@trantect.com>  Wed, 09 Apr 2013 17:46:19 +0800
+
+big-wallpaper (0.3-1) precise; urgency=low
+
+  * Scheduled download images and applied them as wallpaper in turn.
+
+ -- Yale Huang <yale.huang@trantect.com>  Wed, 03 Apr 2013 17:46:19 +0800
+
 big-wallpaper (0.2-1) precise; urgency=low
 
   * Applied SQLite for downloading record

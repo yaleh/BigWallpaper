@@ -7,6 +7,6 @@ Standards-Version: 3.9.1
 
 Package: python-big-wallpaper
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}, python-lxml (>= 2.3.0-1), python-storm (>= 0.19-1)
+Depends: ${misc:Depends}, ${python:Depends}, python-lxml (>= 2.3), python-storm (>= 0.18)
 Description: Update Unity wallpaper with images from Boston Bigpicture
  A Python based wallpaper updating applet from Boston BigPicture for Unity.

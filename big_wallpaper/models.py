@@ -45,7 +45,8 @@ id INTEGER PRIMARY KEY,
     download_time VARCHAR,
     image_path VARCHAR,
     state VARCHAR,
-    active_wallpaper INT
+    active_wallpaper INT,
+    active_time VARCHAR
 )
 """)
 
@@ -81,7 +82,7 @@ NULL,'http://www.theatlantic.com/infocus/','//h1[@class="headline"]/a/@href',
 '//div[@class="dek"]/p/text()',1);
 ''')
         _store.execute('''
-INSERT INTO "source_site" VALUES(3,'Los Angeles Times Franework',
+INSERT INTO "source_site" VALUES(3,'Los Angeles Times Framework',
 'Capturing the world through photography, video and multimedia',
 NULL,'http://framework.latimes.com/','//div[@class="entry-description"]/h1/a/@href',
 '//div[@class="entry-body clearfix"]/a/img/@src',
@@ -89,7 +90,7 @@ NULL,'http://framework.latimes.com/','//div[@class="entry-description"]/h1/a/@hr
 '//div[@class="entry-description"]/p[3]/text()',1);
 ''')
         _store.execute('''
-INSERT INTO "source_site" VALUES(4,'Photo Blog',
+INSERT INTO "source_site" VALUES(4,'NBC News Photo Blog',
 'Conversations sparked by photojournalism. Follow us on Twitter to keep up-to-date.',
 NULL,'http://photoblog.nbcnews.com/','//article[@class="text_post"]//h2/a/@href',
 '//article//img/@src','//article[@class="text_post"]//h2/a/text()',NULL,1);
@@ -137,6 +138,8 @@ class Image(object):
     STATE_DOWNLOADED = u"DOWNLOADED"
     STATE_FAILED = u"FAILED"
     STATE_DELETED = u"DELETED"
+    STATE_QUEUED = u"QUEUED"
+    STATE_EXPIRED = u"EXPIRED"
 
     __storm_table__ = "image"
 
@@ -151,6 +154,7 @@ class Image(object):
     image_path = Unicode()
     state = Unicode() # available state: PENDING, DOWNLOADED, FAILED, DELETED
     active_wallpaper = Bool()
+    active_time = DateTime(default = None)
 
     image_dir = ""
 

@@ -1,5 +1,6 @@
 from gi.repository import GObject
 from urllib2 import urlopen, HTTPError, URLError
+from httplib import HTTPException
 from lxml.html import parse
 from models import *
 from storm.expr import *
@@ -7,19 +8,21 @@ from datetime import datetime
 
 import threading
 import os
+import socket
 
 class DownloadThread(threading.Thread):
     """
     Thread for fetch homepage and image from Boston Big Picture.
     """
 
-    def __init__(self, manager, ui_controller):
+    def __init__(self, manager, ui_controller, config):
         """
         Constructor of DownloadThread.
         """
         super(DownloadThread, self).__init__()
         self.manager = manager
         self.ui_controller = ui_controller
+        self.config = config
 
     def fetch_links(self):
         """
@@ -32,15 +35,15 @@ class DownloadThread(threading.Thread):
             print "Fetching %s" % site.name
 
             try:
-                page = urlopen(site.url)
-            except (HTTPError, URLError):
-                print "Failed to fetch %s"
+                page = urlopen(site.url, timeout=self.config.get_options().timeout)
+            except (HTTPError, URLError, TypeError):
+                print "Failed to fetch %s" % site.url
                 continue
 
-            p = parse(page)
             try:
+                p = parse(page)
                 link = p.xpath(site.image_xpath)[0]
-            except IndexError:
+            except (HTTPException, IndexError, socket.error):
                 print "Failed to parse image path."
                 continue
 
@@ -103,6 +106,8 @@ class DownloadThread(threading.Thread):
             temp_file = self.manager.generate_img_file(".jpg")
 
             if self.download_img_file(temp_file[0], image.source_image_url):                
+                # os.close(temp_file[0])
+
                 print "Downloaded %s: %s" % (image.source_image_url, temp_file[1])
 
                 image.image_path = unicode(temp_file[1])
@@ -111,7 +116,10 @@ class DownloadThread(threading.Thread):
 
                 image_downloaded = True
             else:
+                # os.close(temp_file[0])
+                os.unlink(temp_file[1])
                 print "Failed to download %s" % image.source_image_url
+
                 image.state = Image.STATE_FAILED
 
             store().flush()
@@ -155,12 +163,16 @@ class DownloadThread(threading.Thread):
         """
 
         try:
-            img = urlopen(url)
-        except (HTTPError, URLError, IOError):
+            img = urlopen(url, timeout=self.config.get_options().timeout)
+        except (HTTPError, URLError, IOError, TypeError):
             return False
 
-        f = os.fdopen(fd, 'w')
-        f.write(img.read())
-        f.close()
+        try:
+            f = os.fdopen(fd, 'w')
+            f.write(img.read())
+            f.close()
+        except (HTTPException, IndexError, socket.error):
+            print "Failed to download image: %s" % url
+            return False
 
         return True
