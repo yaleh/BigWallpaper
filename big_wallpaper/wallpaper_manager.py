@@ -70,9 +70,9 @@ class WallPaperManager:
 
         if autostart:
             autostart_desktop_dir_d = os.path.dirname(self.autostart_desktop_file)
-            print "_____ f_source : " + self.desktop_source_file
-            print "_____ f_dest : " + self.autostart_desktop_file
-            print "_____ f_dir : " + autostart_desktop_dir_d
+            #print "_____ f_source : " + self.desktop_source_file
+            #print "_____ f_dest : " + self.autostart_desktop_file
+            #print "_____ f_dir : " + autostart_desktop_dir_d
             if os.path.exists( autostart_desktop_dir_d ) is False:
                 os.makedirs( autostart_desktop_dir_d )
 
