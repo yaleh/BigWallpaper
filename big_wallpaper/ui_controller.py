@@ -113,18 +113,14 @@ class UIController:
         self.update_item.connect("activate",
                                  lambda obj: self.manager.update())
 
-        auto_start_item = Gtk.CheckMenuItem('Start with System')
-        auto_start_item.set_active(self.manager.get_autostart())
-        auto_start_item.connect( \
-            "toggled",
-            lambda obj: \
-                self.manager.update_autostart(auto_start_item.get_active()))
+        self.auto_start_item = Gtk.CheckMenuItem('Start with System')
+        self.auto_start_item.set_active(self.manager.get_autostart())
+        self.auto_start_item.connect( "toggled", lambda obj: self. manager.update_autostart(self.auto_start_item.get_active()))
 
         save_item = Gtk.MenuItem("Save Preference")
-        save_item.connect("activate",
-                               lambda obj: self.config.save())
+        save_item.connect("activate", lambda obj: self.config.save())
 
-        # self.sep_item = Gtk.SeparatorMenuItem()
+        self.sep_item = Gtk.SeparatorMenuItem()
 
         quit_item = Gtk.MenuItem('Quit')
         quit_item.connect("activate", Gtk.main_quit)
@@ -132,11 +128,11 @@ class UIController:
         self.menu.append(image_item)
         self.menu.append(Gtk.SeparatorMenuItem())
         self.menu.append(self.update_item)
-        self.menu.append(auto_start_item)
+        self.menu.append(self.auto_start_item)
         self.menu.append(save_item)
         self.menu.append(Gtk.SeparatorMenuItem())
         self.menu.append(quit_item)
-        self.menu.show_all()        
+        self.menu.show_all()
 
         self.ind.set_menu(self.menu)
 
