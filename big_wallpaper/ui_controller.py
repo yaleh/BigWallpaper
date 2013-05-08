@@ -121,12 +121,11 @@ class UIController:
         self.update_item.connect("activate",
                                  lambda obj: self.manager.update())
 
-        auto_start_item = Gtk.CheckMenuItem('Start with System')
-        auto_start_item.set_active(self.manager.get_autostart())
-        auto_start_item.connect(
+        self.auto_start_item = Gtk.CheckMenuItem('Start with System')
+        self.auto_start_item.set_active(self.manager.get_autostart())
+        self.auto_start_item.connect(
             "toggled",
-            lambda obj:
-            self.manager.update_autostart(auto_start_item.get_active()))
+            lambda obj: self.manager.update_autostart(self.auto_start_item.get_active()))
 
         save_item = Gtk.MenuItem("Save Preference")
         save_item.connect("activate",
