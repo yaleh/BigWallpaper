@@ -33,7 +33,7 @@ class DownloadThread(threading.Thread):
 
         new_link = False
 
-        for site in SourceSite.select().where(SourceSite.active == True):
+        for site in list(SourceSite.select().where(SourceSite.active == True)):
             print "Fetching %s" % site.name
 
             try:
@@ -103,7 +103,7 @@ class DownloadThread(threading.Thread):
 
         image_downloaded = False
 
-        for image in Image.select().where(Image.state == Image.STATE_PENDING).order_by(Image.id.desc()):
+        for image in list(Image.select().where(Image.state == Image.STATE_PENDING).order_by(Image.id.desc())):
             temp_file = self.manager.generate_img_file(".jpg")
 
             if self.download_img_file(temp_file[0], image.source_image_url):

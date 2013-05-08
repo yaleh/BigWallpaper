@@ -84,7 +84,8 @@ class WallPaperManager:
         Delete all images with state of STATE_EXPIRED.
         """
 
-        for old_image in Image.select().where(Image.state == Image.STATE_EXPIRED):
+        for old_image in list(Image.select().where(Image.state == 
+            Image.STATE_EXPIRED)):
             if old_image.image_path is not None:
                 try:
                     os.unlink(old_image.image_path)
@@ -129,7 +130,8 @@ class WallPaperManager:
                 seconds=self.config.get_options().keep) / queued_images.count()
 
             last_image = Image.select().where(
-                Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time.desc()).first()
+                Image.state == Image.STATE_DOWNLOADED).order_by(
+                    Image.download_time.desc()).first()
 
         images_to_show = queued_images.count()
         display_time_per_image = downloading_cycle / images_to_show \
@@ -175,10 +177,12 @@ class WallPaperManager:
         if Image.select().where((Image.state == Image.STATE_DOWNLOADED) &
                        (Image.download_time >= keep_timestamp)).count() == 0:
             downloaded_images = Image.select().where(
-                Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time.desc())
+                Image.state == Image.STATE_DOWNLOADED).order_by(
+                    Image.download_time.desc())
             wallpaper = downloaded_images.first()
             Image.update(state=Image.STATE_EXPIRED).where(
-                (Image.state == Image.STATE_DOWNLOADED) & (Image.id != wallpaper.id)).execute()
+                (Image.state == Image.STATE_DOWNLOADED) &
+                (Image.id != wallpaper.id)).execute()
 
             self.delete_expired_images()
 
@@ -197,7 +201,8 @@ class WallPaperManager:
 
         # Calcualte the updating cycle
         display_time_per_image = self.calculate_updating_cycle()
-        print "Display time per image: %d" % display_time_per_image.total_seconds()
+        print "Display time per image: %d" % \
+            display_time_per_image.total_seconds()
 
         # did the current wallpaper expire?
         if current_wallpaper is not None:
@@ -206,7 +211,8 @@ class WallPaperManager:
                 current_wallpaper.save()
                 return current_wallpaper
 
-            if current_wallpaper.active_time >= datetime.now() - display_time_per_image:
+            if current_wallpaper.active_time >= \
+                    datetime.now() - display_time_per_image:
                 # not expired, nothing to do
                 print "Time till the coming wallpaper switching: %d" % \
                     (current_wallpaper.active_time +
