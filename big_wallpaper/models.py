@@ -1,139 +1,102 @@
-from storm.locals import *
+from peewee import *
 from gi.repository import Gio
 from datetime import datetime
 import tempfile
 
-_database = None
-_store = None
-_db_url = None
+db = SqliteDatabase(None)
+
 
 def store():
-    global _database, _store
+    global db
 
-    if _database is not None and (_store is None or _store._connection._closed):
-        _store = Store(_database)
-    return _store
+    return db
+
 
 def init_pollute():
-    if _store is None:
-        return
+    SourceSite.create_table(fail_silently=True)
+    Image.create_table(fail_silently=True)
 
-    # see https://storm.canonical.com/Manual for the properties mapping
+    if SourceSite.select().count() == 0:
+        SourceSite.create(
+            name='Boston Bigpicture',
+            description='Bigpicture from Boston',
+            url='http://www.boston.com/bigpicture',
+            link_xpath='//img[@class="bpImage"]/parent::a/@href',
+            image_xpath='//img[@class="bpImage"]/@src',
+            title_xpath='//div[@class="headDiv2"]/h2/a/text()',
+            description_xpath='//div[@class="bpBody"]/text()',
+            active=True
+        )
+        SourceSite.create(
+            name='The Atlantic In Focus',
+            description='In Focus with Alan Taylor',
+            url='http://www.theatlantic.com/infocus/',
+            link_xpath='//h1[@class="headline"]/a/@href',
+            image_xpath='//span[@class="if1280"]//img/@src',
+            title_xpath='//h1[@class="headline"]/a/text()',
+            description_xpath='//div[@class="dek"]/p/text()',
+            active=True
+        )
+        SourceSite.create(
+            name='Los Angeles Times Framework',
+            description='Capturing the world through photography, video and multimedia',
+            url='http://framework.latimes.com/',
+            link_xpath='//div[@class="entry-description"]/h1/a/@href',
+            image_xpath='//div[@class="entry-body clearfix"]/a/img/@src',
+            title_xpath='//div[@class="entry-description"]/h1/a/text()',
+            description_xpath='//div[@class="entry-description"]/p[3]/text()',
+            active=True
+        )
+        SourceSite.create(
+            name='NBC News Photo Blog',
+            description='Conversations sparked by photojournalism. Follow us on Twitter to keep up-to-date.',
+            url='http://photoblog.nbcnews.com/',
+            link_xpath='//article[@class="text_post"]//h2/a/@href',
+            image_xpath='//article//img/@src',
+            title_xpath='//article[@class="text_post"]//h2/a/text()',
+            active=True
+        )
+        SourceSite.create(
+            name='Reuters Full Focus',
+            description='Reutuers Full Focus',
+            url='http://blogs.reuters.com/fullfocus/',
+            link_xpath='//div[@class="topStory"]/div[@class="photo"]/a/@href',
+            image_xpath='//div[@class="topStory"]/div[@class="photo"]/a/img/@src',
+            title_xpath='//div[@class="topStory"]/div[@class="ImageTitle"]/a/text()',
+            description_xpath='//div[@class="topStory"]/div[@class="ImageCaption"]/text()',
+            active=True
+        )
 
-    _store.execute("""
-CREATE TABLE IF NOT EXISTS source_site(
-    id INTEGER PRIMARY KEY,
-    name VARCHAR,
-    description VARCHAR,
-    last_update VARCHAR,
-    url VARCHAR,
-    link_xpath VARCHAR,
-    image_xpath VARCHAR,
-    title_xpath VARCHAR,
-    description_xpath VARCHAR,
-    active INT
-)
-""")
-    _store.execute("""
-CREATE TABLE IF NOT EXISTS image(
-id INTEGER PRIMARY KEY,
-    source_site_id INTEGER,
-    source_link VARCHAR,
-    source_image_url VARCHAR,
-    source_title VARCHAR,
-    source_description VARCHAR,
-    download_time VARCHAR,
-    image_path VARCHAR,
-    state VARCHAR,
-    active_wallpaper INT,
-    active_time VARCHAR
-)
-""")
-
-    _store.flush()
-    _store.commit()
-
-    if _store.find(SourceSite).count() == 0:
-        # site = SourceSite()
-        # site.name = u"Boston BigPicture"
-        # site.description = u"Bigpicture from Boston"
-        # site.last_update = datetime(1900, 1, 1)
-        # site.url = u"http://www.boston.com/bigpicture"
-        # site.link_xpath = u'//img[@class="bpImage"]/parent::a/@href'
-        # site.image_xpath = u'//img[@class="bpImage"]/@src'
-        # site.title_xpath = u'//div[@class="headDiv2"]/h2/a/text()'
-        # site.description_xpath = u'//div[@class="bpBody"]/text()'
-        # site.active = True
-
-        # _store.add(site)
-        # _store.flush()
-        # _store.commit()
-
-        _store.execute('''
-INSERT INTO "source_site" VALUES(1,'Boston Bigpicture','Bigpicture from Boston',
-NULL,'http://www.boston.com/bigpicture','//img[@class="bpImage"]/parent::a/@href',
-'//img[@class="bpImage"]/@src','//div[@class="headDiv2"]/h2/a/text()',
-'//div[@class="bpBody"]/text()',1);
-''')
-        _store.execute('''
-INSERT INTO "source_site" VALUES(2,'The Atlantic In Focus','In Focus with Alan Taylor',
-NULL,'http://www.theatlantic.com/infocus/','//h1[@class="headline"]/a/@href',
-'//span[@class="if1280"]//img/@src','//h1[@class="headline"]/a/text()',
-'//div[@class="dek"]/p/text()',1);
-''')
-        _store.execute('''
-INSERT INTO "source_site" VALUES(3,'Los Angeles Times Framework',
-'Capturing the world through photography, video and multimedia',
-NULL,'http://framework.latimes.com/','//div[@class="entry-description"]/h1/a/@href',
-'//div[@class="entry-body clearfix"]/a/img/@src',
-'//div[@class="entry-description"]/h1/a/text()',
-'//div[@class="entry-description"]/p[3]/text()',1);
-''')
-        _store.execute('''
-INSERT INTO "source_site" VALUES(4,'NBC News Photo Blog',
-'Conversations sparked by photojournalism. Follow us on Twitter to keep up-to-date.',
-NULL,'http://photoblog.nbcnews.com/','//article[@class="text_post"]//h2/a/@href',
-'//article//img/@src','//article[@class="text_post"]//h2/a/text()',NULL,1);
-''')
-        _store.execute('''
-INSERT INTO "source_site" VALUES(5,'Reuters Full Focus','Reutuers Full Focus',
-NULL,'http://blogs.reuters.com/fullfocus/',
-'//div[@class="topStory"]/div[@class="photo"]/a/@href',
-'//div[@class="topStory"]/div[@class="photo"]/a/img/@src',
-'//div[@class="topStory"]/div[@class="ImageTitle"]/a/text()',
-'//div[@class="topStory"]/div[@class="ImageCaption"]/text()',1);
-''')
-        _store.flush()
-        _store.commit()
 
 def connect_db(path):
-    global _store, _db_url, _database
-    _db_url = "sqlite:%s" % path
+    global db
 
-    _database = create_database(_db_url)
-    _store = Store(_database)
+    db.init(path, check_same_thread=False)
+    db.connect()
+
     init_pollute()
-    _store.close()
-    _store = None
 
-class SourceSite(object):
-    __storm_table__ = "source_site"
 
-    id = Int(primary = True)
-    name = Unicode()
-    description = Unicode()
-    last_update = DateTime()
-    url = Unicode()
-    link_xpath = Unicode()
-    image_xpath = Unicode()
-    title_xpath = Unicode()
-    description_xpath = Unicode()
-    active = Bool()
+class BaseModel(Model):
 
-SCHEMA = 'org.gnome.desktop.background'
-KEY = 'picture-uri'
+    class Meta:
+        database = db
 
-class Image(object):
+
+class SourceSite(BaseModel):
+    id = IntegerField(primary_key=True)
+    name = CharField()
+    description = CharField(null=True)
+    last_update = DateTimeField(null=True)
+    url = TextField()
+    link_xpath = CharField(null=True)
+    image_xpath = CharField(null=True)
+    title_xpath = CharField(null=True)
+    description_xpath = CharField(null=True)
+    active = BooleanField()
+
+
+class Image(BaseModel):
     STATE_PENDING = u"PENDING"
     STATE_DOWNLOADED = u"DOWNLOADED"
     STATE_FAILED = u"FAILED"
@@ -141,28 +104,19 @@ class Image(object):
     STATE_QUEUED = u"QUEUED"
     STATE_EXPIRED = u"EXPIRED"
 
-    __storm_table__ = "image"
+    id = IntegerField(primary_key=True)
+    source_site = ForeignKeyField(SourceSite, related_name='source_site')
+    source_link = TextField(null=True)
+    source_image_url = TextField(null=True)
+    source_title = TextField(null=True)
+    source_description = TextField(null=True)
+    download_time = DateTimeField(null=True)
+    image_path = TextField(null=True)
+    state = CharField(default=STATE_PENDING)
+                      # available state: PENDING, DOWNLOADED, FAILED, DELETED,
+                      # QUEUED, EXPIRED
+    active_wallpaper = BooleanField(default=False)
+    active_time = DateTimeField(default=None, null=True)
 
-    id = Int(primary = True)
-    source_site_id = Int()
-    source_site = Reference(source_site_id, SourceSite.id)
-    source_link = Unicode()
-    source_image_url = Unicode()
-    source_title = Unicode()
-    source_description = Unicode()
-    download_time = DateTime()
-    image_path = Unicode()
-    state = Unicode() # available state: PENDING, DOWNLOADED, FAILED, DELETED
-    active_wallpaper = Bool()
-    active_time = DateTime(default = None)
-
-    image_dir = ""
-
-    @staticmethod
-    def generate_img_file(suffix):
-        return tempfile.mkstemp(suffix=suffix, dir=image_dir)
-
-    @staticmethod
-    def set_image_dir(path):
-        image_dir = path
-
+SCHEMA = 'org.gnome.desktop.background'
+KEY = 'picture-uri'

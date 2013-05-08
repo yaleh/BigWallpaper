@@ -9,7 +9,9 @@ import tempfile
 
 from big_wallpaper.download_thread import DownloadThread
 
+
 class WallPaperManager:
+
     """
     Manager of dowloading thread, content and settings.
 
@@ -58,7 +60,7 @@ class WallPaperManager:
         Find out whether auto start is enabled.
         """
         return os.access(self.autostart_desktop_file, os.F_OK)
-                       
+
     def update_autostart(self, autostart):
         """
         Enable/disable auto start.
@@ -82,7 +84,7 @@ class WallPaperManager:
         Delete all images with state of STATE_EXPIRED.
         """
 
-        for old_image in store().find(Image, Image.state == Image.STATE_EXPIRED):
+        for old_image in Image.select().where(Image.state == Image.STATE_EXPIRED):
             if old_image.image_path is not None:
                 try:
                     os.unlink(old_image.image_path)
@@ -92,8 +94,7 @@ class WallPaperManager:
             old_image.state = Image.STATE_DELETED
             old_image.active_wallpaper = False
 
-            store().flush()
-            store().commit()
+            old_image.save()
 
     def update_wallpaper_record(self, image):
         """
@@ -103,8 +104,7 @@ class WallPaperManager:
         image.active_wallpaper = True
         if image.active_time is not None:
             image.active_time = datetime.now()
-        store().flush()
-        store().commit()
+        image.save()
 
     def calculate_updating_cycle(self):
         """
@@ -112,18 +112,24 @@ class WallPaperManager:
         """
 
         # Estimate the time when the next image will downloaded.
-        keep_timestamp = datetime.now() - timedelta(seconds=self.config.get_options().keep)
-        queued_images = store().find(Image,
-                                     And(Image.state == Image.STATE_DOWNLOADED,
-                                         Image.download_time >= keep_timestamp,
-                                         Image.active_wallpaper == False))
-        downloading_cycle = 0;
-        if queued_images.count() == 0:
-            downloading_cycle = timedelta(seconds=self.config.get_options().keep)
-        else:
-            downloading_cycle = timedelta(seconds=self.config.get_options().keep) / queued_images.count()
+        keep_timestamp = datetime.now() - timedelta(
+            seconds=self.config.get_options().keep)
 
-            last_image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time)).first()
+        queued_images = Image.select().where(
+            (Image.state == Image.STATE_DOWNLOADED) &
+            (Image.download_time >= keep_timestamp) &
+            (Image.active_wallpaper == False))
+
+        downloading_cycle = 0
+        if queued_images.count() == 0:
+            downloading_cycle = timedelta(
+                seconds=self.config.get_options().keep)
+        else:
+            downloading_cycle = timedelta(
+                seconds=self.config.get_options().keep) / queued_images.count()
+
+            last_image = Image.select().where(
+                Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time.desc()).first()
 
         images_to_show = queued_images.count()
         display_time_per_image = downloading_cycle / images_to_show \
@@ -137,57 +143,56 @@ class WallPaperManager:
         Find out the wallpaper image and set it.
         """
 
-        try:
-            image = self.get_wallpaper_image()
-            if image is not None:
-                print "New wallpaper image: %s" % image.image_path
-                self.update_gsettings(image)
-        finally:
-            store().close()
+        image = self.get_wallpaper_image()
+        if image is not None:
+            print "New wallpaper image: %s" % image.image_path
+            self.update_gsettings(image)
 
     def get_wallpaper_image(self):
         """
         Find out the wallpaer image to use based on DB records.
         """
 
-        # if the current_wallpaper is the only image of STATE_DOWNLOADED, then nothing to do
-        current_wallpaper = store().find(Image, Image.active_wallpaper == True).any() 
+        # if the current_wallpaper is the only image of STATE_DOWNLOADED, then
+        # nothing to do
 
-        if store().find(Image,
-                        And(Image.state == Image.STATE_DOWNLOADED,
-                            Image.active_wallpaper == False)).count() == 0:
+        current_wallpaper = None
+
+        try:
+            current_wallpaper = Image.get(Image.active_wallpaper == True)
+        except Image.DoesNotExist:
+            pass
+
+        if Image.select().where((Image.state == Image.STATE_DOWNLOADED) &
+                       (Image.active_wallpaper == False)).count() == 0:
             return current_wallpaper
 
-        keep_timestamp = datetime.now() - timedelta(seconds=self.config.get_options().keep)
+        keep_timestamp = datetime.now() - timedelta(
+            seconds=self.config.get_options().keep)
 
-        # if there's no downloaded image during KEEP duration, then active the latest one
-        if store().find(Image,
-                        And(Image.state == Image.STATE_DOWNLOADED,
-                            Image.download_time >= keep_timestamp)).count() == 0:
-            downloaded_images = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Desc(Image.download_time))
+        # if there's no downloaded image during KEEP duration, then active the
+        # latest one
+        if Image.select().where((Image.state == Image.STATE_DOWNLOADED) &
+                       (Image.download_time >= keep_timestamp)).count() == 0:
+            downloaded_images = Image.select().where(
+                Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time.desc())
             wallpaper = downloaded_images.first()
-            downloaded_images.set(state = Image.STATE_EXPIRED)
-            wallpaper.state = Image.STATE_DOWNLOADED
+            Image.update(state=Image.STATE_EXPIRED).where(
+                (Image.state == Image.STATE_DOWNLOADED) & (Image.id != wallpaper.id)).execute()
 
-            store().flush()
-            store().commit()
-
-            # unlink expired images
             self.delete_expired_images()
 
             # set the new wallpaper
-            # self.active_wallpaper(wallpaper)
             self.update_wallpaper_record(wallpaper)
 
             return wallpaper
 
         # unlink all images over KEEP duration
-        expired_images = store().find(Image,
-                                      And(Image.state == Image.STATE_DOWNLOADED,
-                                          Image.download_time < keep_timestamp))
-        expired_images.set(state = Image.STATE_EXPIRED)
-        store().flush()
-        store().commit()            
+
+        Image.update(state=Image.STATE_EXPIRED).where(
+            (Image.state == Image.STATE_DOWNLOADED) &
+            (Image.download_time < keep_timestamp)).execute()
+
         self.delete_expired_images()
 
         # Calcualte the updating cycle
@@ -198,23 +203,23 @@ class WallPaperManager:
         if current_wallpaper is not None:
             if current_wallpaper.active_time is None:
                 current_wallpaper.active_time = datetime.now()
-                store().flush()
-                store().commit()
+                current_wallpaper.save()
                 return current_wallpaper
 
             if current_wallpaper.active_time >= datetime.now() - display_time_per_image:
                 # not expired, nothing to do
                 print "Time till the coming wallpaper switching: %d" % \
-                    (current_wallpaper.active_time + display_time_per_image - datetime.now()).total_seconds()
+                    (current_wallpaper.active_time +
+                     display_time_per_image - datetime.now()).total_seconds()
                 return current_wallpaper
 
             current_wallpaper.state = Image.STATE_EXPIRED
-            store().flush()
-            store().commit()            
+            current_wallpaper.save()
             self.delete_expired_images()
 
         # active the first downloaded image
-        image = store().find(Image, Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time).first()
+        image = Image.select().where(
+            Image.state == Image.STATE_DOWNLOADED).order_by(Image.download_time).first()
 
         if image is None:
             return None
@@ -236,8 +241,9 @@ class WallPaperManager:
         if self.get_gsettings_wallpaper() != "file://" + image.image_path:
             gsettings = Gio.Settings.new(self.SCHEMA)
             gsettings.set_string(self.KEY, "file://" + image.image_path)
-            GObject.idle_add(lambda: self.ui_controller.notify_wallpaper_update(image))
-    
+            GObject.idle_add(
+                lambda: self.ui_controller.notify_wallpaper_update(image))
+
     def get_gsettings_wallpaper(self):
         """
         Get the current wallpaper image URI with gsettings.
