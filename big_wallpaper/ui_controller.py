@@ -1,7 +1,9 @@
 from gi.repository import Gio, Gtk, GObject, AppIndicator3, Notify
 from models import *
 
+
 class AnimationTimer:
+
     """
     Timer of icon animation.
     """
@@ -15,8 +17,8 @@ class AnimationTimer:
         self.icons = icons
         self.current_icon_index = 0
         self.ui_controller = ui_controller
-        
-        self.ui_controller.update_appindicator( \
+
+        self.ui_controller.update_appindicator(
             self.icons[self.current_icon_index])
 
         self.timer_id = GObject.timeout_add(self.interval, self.on_timer)
@@ -40,12 +42,14 @@ class AnimationTimer:
             self.current_icon_index += 1
             self.current_icon_index %= len(self.icons)
 
-            self.ui_controller.update_appindicator( \
+            self.ui_controller.update_appindicator(
                 self.icons[self.current_icon_index])
         finally:
-            return True # continue
+            return True  # continue
+
 
 class UIController:
+
     """
     UI controller for GTK.
     """
@@ -56,7 +60,7 @@ class UIController:
                            'big_wallpaper_updating_3.png',
                            'big_wallpaper_updating_4.png',
                            'big_wallpaper_updating_5.png']
-    
+
     def __init__(self, manager, config, icon_dir=None):
         """
         Constructor of UIController.
@@ -72,11 +76,11 @@ class UIController:
 
         self.icon_dir = icon_dir
 
-        self.ind = AppIndicator3.Indicator.new ( \
+        self.ind = AppIndicator3.Indicator.new(
             "BigWallpaper",
             "%s/%s" % (self.icon_dir, self.ICON_FILE),
             AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
-        self.ind.set_status (AppIndicator3.IndicatorStatus.ACTIVE)
+        self.ind.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
 
         self.update_menu()
 
@@ -93,19 +97,23 @@ class UIController:
         # create a menu
         self.menu = Gtk.Menu()
 
+        image = None
         image_title = 'No Image'
+
         try:
-            image = store().find(Image, Image.active_wallpaper == True).any()
-            if image is not None:
-                image_title = "%s (%s)" % (image.source_title, image.source_site.name)
-        finally:
-            store().close()
+            image = Image.get(Image.active_wallpaper == True)
+        except Image.DoesNotExist:
+            pass
+        else:
+            image_title = "%s (%s)" % (
+                image.source_title, image.source_site.name)
 
         image_item = Gtk.MenuItem(image_title)
         if image is not None and image.source_link is not None:
             image_item.connect("activate",
-                               lambda obj: Gtk.show_uri(None, image.source_link,
-                                                        Gtk.get_current_event_time()))
+                               lambda obj: Gtk.show_uri(
+                                   None, image.source_link,
+                               Gtk.get_current_event_time()))
         else:
             image_item.set_sensitive(False)
 
@@ -113,12 +121,16 @@ class UIController:
         self.update_item.connect("activate",
                                  lambda obj: self.manager.update())
 
-        self.auto_start_item = Gtk.CheckMenuItem('Start with System')
-        self.auto_start_item.set_active(self.manager.get_autostart())
-        self.auto_start_item.connect( "toggled", lambda obj: self. manager.update_autostart(self.auto_start_item.get_active()))
+        auto_start_item = Gtk.CheckMenuItem('Start with System')
+        auto_start_item.set_active(self.manager.get_autostart())
+        auto_start_item.connect(
+            "toggled",
+            lambda obj:
+            self.manager.update_autostart(auto_start_item.get_active()))
 
         save_item = Gtk.MenuItem("Save Preference")
-        save_item.connect("activate", lambda obj: self.config.save())
+        save_item.connect("activate",
+                          lambda obj: self.config.save())
 
         self.sep_item = Gtk.SeparatorMenuItem()
 
@@ -146,10 +158,10 @@ class UIController:
         self.update_item.set_sensitive(False)
         self.update_item.set_label("Updating...")
 
-        self.animation_timer = AnimationTimer( \
+        self.animation_timer = AnimationTimer(
             self, 500,
             map(lambda s: "%s/%s" % (self.icon_dir, s),
-                self.UPDATING_ICON_FILES) )
+                self.UPDATING_ICON_FILES))
 
     def finish_updating(self):
         """
@@ -190,11 +202,10 @@ class UIController:
         Notification popup on setting a new wallpaper.
         """
 
-        if not Notify.init ("BigWallpaper"):
+        if not Notify.init("BigWallpaper"):
             return
         n = Notify.Notification.new("A new wallpaper by BigWallpaper",
                                     image.source_title,
                                     image.image_path)
-                                    # "dialog-information")
-        n.show ()
+        n.show()
         self.update_menu()
